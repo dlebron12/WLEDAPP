@@ -228,3 +228,7 @@ button.link {
   .account span { display: none; }
   .grid-2 { grid-template-columns: 1fr; }
 }
+
+.hint { margin: 0; font-size: 0.85rem; color: var(--muted); }
+.hint:empty { display: none; }
+.hint-inline { font-size: 0.8rem; opacity: 0.8; }

@@ -45,18 +45,62 @@ function validateSettings(s) {
 
 const hexToRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 
-function buildPayload(s) {
-  const seg = { id: 0 };
-  if (s.effect === 'individual') {
-    seg.fx = EFFECTS.solid;
-    seg.i = s.pixels.map((c) => c.slice(1).toUpperCase());
-  } else {
-    seg.fx = EFFECTS[s.effect];
-    seg.frz = false; // un-freeze in case Individual Light was used before
-    seg.sx = s.speed;
-    seg.col = [hexToRgb(s.color)];
+const MAX_STRIPS = 16;          // WLED's usual segment limit
+const MAX_STRIP_LENGTH = 1500;
+
+// Spreads the 25 preview colors across a strip of `length` lights as WLED ranges:
+// [start, stop, "RRGGBB", ...] (stop is exclusive; indexes are relative to the segment).
+// Neighboring bulbs with the same color are merged into one range.
+function pixelRanges(pixels, length) {
+  const out = [];
+  for (let b = 0; b < GRID_SIZE; b++) {
+    const start = Math.floor((b * length) / GRID_SIZE);
+    const stop = Math.floor(((b + 1) * length) / GRID_SIZE);
+    if (stop <= start) continue;
+    const hex = pixels[b].slice(1).toUpperCase();
+    const n = out.length;
+    if (n && out[n - 1] === hex && out[n - 2] === start) out[n - 2] = stop;
+    else out.push(start, stop, hex);
   }
-  return { on: true, bri: s.brightness, seg: [seg] };
+  return out;
+}
+
+// Builds the JSON bodies to POST to /json/state, in order, for a device and a list of
+// { number, settings } strips. Strip N is WLED segment N-1, covering lights
+// (N-1)*strip_length up to N*strip_length.
+// WLED ignores per-LED colors sent in the same request that turns the lights on,
+// so Individual Light colors go in a second request.
+function buildRequests(device, strips, { removeExtraSegments = false } = {}) {
+  const len = device.strip_length;
+  const segs = strips.map(({ number, settings: s }) => {
+    const seg = {
+      id: number - 1,
+      start: (number - 1) * len,
+      stop: number * len,
+      on: true,
+      bri: s.brightness,
+    };
+    if (s.effect === 'individual') {
+      seg.fx = EFFECTS.solid;
+    } else {
+      seg.fx = EFFECTS[s.effect];
+      seg.frz = false; // un-freeze in case Individual Light was used before
+      seg.sx = s.speed;
+      seg.col = [hexToRgb(s.color)];
+    }
+    return seg;
+  });
+  if (removeExtraSegments) {
+    // Delete leftover segments beyond the configured strips (stop: 0 deletes a segment).
+    for (let id = device.strip_count; id < MAX_STRIPS; id++) segs.push({ id, stop: 0 });
+  }
+
+  const requests = [{ on: true, bri: 255, seg: segs }];
+  const individual = strips
+    .filter(({ settings }) => settings.effect === 'individual')
+    .map(({ number, settings }) => ({ id: number - 1, i: pixelRanges(settings.pixels, len) }));
+  if (individual.length) requests.push({ seg: individual });
+  return requests;
 }
 
 // Only local-network addresses: an IPv4 address in a private/loopback range,
@@ -77,15 +121,20 @@ function isLocalHost(host) {
   return /^[a-z0-9-]+$/i.test(name) || /^[a-z0-9-]+(\.[a-z0-9-]+)*\.local$/i.test(name);
 }
 
-async function applyToDevice(host, settings) {
-  const res = await fetch(`http://${host}/json/state`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildPayload(settings)),
-    signal: AbortSignal.timeout(5000),
-  });
-  if (!res.ok) throw new Error(`Device responded with HTTP ${res.status}.`);
-  return res.json().catch(() => ({}));
+// Sends the requests one after another (WLED handles sequential calls best).
+async function applyToDevice(device, strips, options) {
+  for (const body of buildRequests(device, strips, options)) {
+    const res = await fetch(`http://${device.host}/json/state`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) throw new Error(`Device responded with HTTP ${res.status}.`);
+  }
 }
 
-module.exports = { EFFECTS, DEFAULT_SETTINGS, validateSettings, buildPayload, isLocalHost, applyToDevice };
+module.exports = {
+  EFFECTS, DEFAULT_SETTINGS, MAX_STRIPS, MAX_STRIP_LENGTH,
+  validateSettings, pixelRanges, buildRequests, isLocalHost, applyToDevice,
+};

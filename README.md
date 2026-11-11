@@ -3,9 +3,25 @@
 A web app for controlling WLED light controllers on your home network.
 
 - **Sign in / create account**
-- **Controls tab**: add your WLED devices by IP address, pick one from a dropdown, choose an effect
-  (Individual Light, Solid, Blink, Twinkle, Colorful), adjust color/brightness/speed, watch a live
-  5×5 preview, then **Save** the settings or **Apply** them to the lights.
+- **Controls tab**: add your WLED controllers (IP address, number of strips, lights per strip), pick a
+  device and a strip (or all strips), choose an effect (Individual Light, Solid, Blink, Twinkle,
+  Colorful), adjust color/brightness/speed, watch a live 5×5 preview, then **Save** the settings or
+  **Apply** them to the lights.
+
+### Strips
+A controller can drive several strips (default **300 lights** each). The app treats each strip as its
+own section, a WLED *segment*, with its own effect and settings:
+
+| Strip | WLED segment | Lights |
+|---|---|---|
+| 1 | 0 | 0–299 |
+| 2 | 1 | 300–599 |
+| N | N−1 | (N−1)×length … N×length−1 |
+
+Total lights = strips × lights per strip. Set the same total LED count in WLED itself
+(Config → LED Preferences). Applying to "All strips" also removes any extra WLED segments beyond
+the configured strips. For Individual Light, the 25 preview bulbs are spread evenly along the strip
+(300 lights → each bulb covers 12 lights).
 
 The app must run on a computer on the same network as your WLED controllers.
 
@@ -38,11 +54,14 @@ Then open http://localhost:3000.
 | POST   | `/api/logout` |                            | Sign out                    |
 | GET    | `/api/me`     |                            | Current signed-in user      |
 | GET    | `/api/devices` |                           | List your devices           |
-| POST   | `/api/devices` | `{ name, host }`          | Add a device (local IP or `.local` name) |
+| POST   | `/api/devices` | `{ name, host, stripCount, stripLength }` | Add a device (local IP or `.local` name) |
+| PUT    | `/api/devices/:id` | same as above         | Edit a device               |
 | DELETE | `/api/devices/:id` |                       | Remove a device             |
-| GET    | `/api/devices/:id/settings` |              | Saved settings (or defaults) |
-| PUT    | `/api/devices/:id/settings` | settings     | Save settings               |
-| POST   | `/api/devices/:id/apply` | settings        | Send settings to the WLED device |
+| GET    | `/api/devices/:id/strips/:strip/settings` | | Saved settings (or defaults) |
+| PUT    | `/api/devices/:id/strips/:strip/settings` | settings | Save settings     |
+| POST   | `/api/devices/:id/strips/:strip/apply` | settings | Send settings to the WLED device |
+
+`:strip` is a strip number (1, 2, …) or `all`.
 
 Settings: `{ effect, color: "#rrggbb", brightness: 1–255, speed: 0–255, pixels: [25 × "#rrggbb"] }`.
 
@@ -60,5 +79,9 @@ Rules: usernames are 3–32 characters (letters, numbers, `_ . -`) and unique re
 ## Database schema
 - `users`: `id`, `username`, `password_hash`, `created_at`
 - `sessions`: `token`, `user_id`, `expires_at` (7-day sign-in sessions, stored in a cookie)
-- `devices`: `id`, `user_id`, `name`, `host`, `created_at`
-- `device_settings`: `device_id`, `settings` (JSON), `updated_at`
+- `devices`: `id`, `user_id`, `name`, `host` (controller IP), `strip_count`, `strip_length`,
+  `total_lights` (computed: `strip_count × strip_length`), `created_at`
+- `strip_settings`: `device_id`, `strip_number`, `settings` (JSON), `updated_at`
+
+Schema changes are applied automatically at startup (`src/db.js`, tracked with SQLite's `user_version`),
+so an existing `data/wledapp.db` is upgraded in place.
