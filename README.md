@@ -7,8 +7,17 @@ A web app with user accounts. Right now it has sign-in and account creation.
 - **SQLite** (via `better-sqlite3`): the database is a single file at `data/wledapp.db`, created automatically on first run
 - **scrypt** (built into Node): passwords are stored only as salted hashes, never as plain text
 
+## Tool versions
+Exact versions are listed in `env.yaml` and enforced by:
+- `.nvmrc`: Node.js version (used by nvm)
+- `package.json` `engines`: Node.js and npm versions (`.npmrc` makes `npm install` refuse other versions)
+- `package-lock.json`: every npm package
+
 ## Run it
+Install [nvm](https://github.com/nvm-sh/nvm) (Mac/Linux) or [nvm-windows](https://github.com/coreybutler/nvm-windows), then from the project folder:
 ```bash
+nvm install        # installs the Node version in .nvmrc (nvm-windows: nvm install 22.23.4)
+nvm use            # (nvm-windows: nvm use 22.23.4)
 npm install
 npm start
 ```
