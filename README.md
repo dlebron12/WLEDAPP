@@ -1,6 +1,6 @@
-# WLED App
+# Light Ops: WLED controller app
 
-A web app for controlling WLED light controllers on your home network.
+Light Ops Permanent Lighting's web app for controlling WLED light controllers on a home network.
 
 - **Sign in / create account**
 - **Setup tab**: find WLED controllers on the network (no IP address needed) and add them, or add one

@@ -266,3 +266,11 @@ button.link {
 .empty-state { display: grid; justify-items: center; gap: 12px; padding: 24px 0 8px; color: var(--muted); }
 .empty-state[hidden] { display: none; }
 .empty-state p { margin: 0; }
+
+/* Light Ops logo */
+.brand-logo { margin: -8px 0 20px; text-align: center; line-height: 0; }
+.brand-logo img { width: 100%; max-width: 260px; height: auto; }
+.brand-lockup { display: flex; align-items: center; gap: 10px; padding: 8px 0; line-height: 0; text-decoration: none; }
+.brand-lockup .mark { height: 40px; width: auto; }
+.brand-lockup .wordmark { height: 22px; width: auto; }
+@media (max-width: 480px) { .brand-lockup .wordmark { display: none; } }
