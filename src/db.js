@@ -23,6 +23,21 @@ db.exec(`
     user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     expires_at INTEGER NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS devices (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name       TEXT    NOT NULL,
+    host       TEXT    NOT NULL,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- Last saved light settings for each device.
+  CREATE TABLE IF NOT EXISTS device_settings (
+    device_id  INTEGER PRIMARY KEY REFERENCES devices(id) ON DELETE CASCADE,
+    settings   TEXT    NOT NULL,  -- JSON: { effect, color, brightness, speed, pixels }
+    updated_at TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 module.exports = {
@@ -34,4 +49,14 @@ module.exports = {
   findSession: db.prepare('SELECT * FROM sessions WHERE token = ? AND expires_at > ?'),
   deleteSession: db.prepare('DELETE FROM sessions WHERE token = ?'),
   deleteExpiredSessions: db.prepare('DELETE FROM sessions WHERE expires_at <= ?'),
+
+  listDevices: db.prepare('SELECT id, name, host FROM devices WHERE user_id = ? ORDER BY name COLLATE NOCASE'),
+  findDevice: db.prepare('SELECT id, name, host FROM devices WHERE id = ? AND user_id = ?'),
+  insertDevice: db.prepare('INSERT INTO devices (user_id, name, host) VALUES (?, ?, ?)'),
+  deleteDevice: db.prepare('DELETE FROM devices WHERE id = ? AND user_id = ?'),
+  getSettings: db.prepare('SELECT settings, updated_at FROM device_settings WHERE device_id = ?'),
+  upsertSettings: db.prepare(`
+    INSERT INTO device_settings (device_id, settings, updated_at) VALUES (?, ?, datetime('now'))
+    ON CONFLICT(device_id) DO UPDATE SET settings = excluded.settings, updated_at = excluded.updated_at
+  `),
 };

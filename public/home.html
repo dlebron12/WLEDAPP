@@ -6,23 +6,91 @@
   <title>WLED App</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
-<body>
-  <main class="card">
-    <h1 class="brand">WLED&nbsp;App</h1>
-    <p>Welcome, <strong id="username">…</strong>! You're signed in.</p>
-    <button id="logout" class="secondary">Sign out</button>
+<body class="app">
+  <header class="topbar">
+    <span class="brand small">WLED&nbsp;App</span>
+    <nav class="tabs nav" role="tablist">
+      <button class="tab active" role="tab" aria-selected="true" data-tab="controls">Controls</button>
+    </nav>
+    <div class="account">
+      <span id="username">…</span>
+      <button id="logout" class="link">Sign out</button>
+    </div>
+  </header>
+
+  <main class="card wide" id="tab-controls" role="tabpanel">
+    <h2>Controls</h2>
+
+    <!-- Device -->
+    <div class="field">
+      <label for="device">Device</label>
+      <div class="row">
+        <select id="device"></select>
+        <button id="add-device-btn" class="secondary inline" type="button">+ Add</button>
+        <button id="remove-device-btn" class="secondary inline" type="button" title="Remove this device">Remove</button>
+      </div>
+    </div>
+
+    <form id="add-device-form" class="subform" hidden>
+      <label>Name <input name="name" placeholder="Living room" maxlength="40" required></label>
+      <label>IP address <input name="host" placeholder="192.168.1.50" required></label>
+      <div class="row">
+        <button type="submit" class="primary inline">Add device</button>
+        <button type="button" id="cancel-add" class="secondary inline">Cancel</button>
+      </div>
+    </form>
+
+    <fieldset id="settings" disabled>
+      <!-- Effects -->
+      <div class="field">
+        <label for="effect">Effects</label>
+        <select id="effect">
+          <option value="individual">Individual Light</option>
+          <option value="solid">Solid</option>
+          <option value="blink">Blink</option>
+          <option value="twinkle">Twinkle</option>
+          <option value="colorful">Colorful</option>
+        </select>
+      </div>
+
+      <div class="grid-2">
+        <div class="field" id="color-field">
+          <label for="color">Color</label>
+          <input type="color" id="color">
+        </div>
+        <div class="field">
+          <label for="brightness">Brightness <output id="brightness-val"></output></label>
+          <input type="range" id="brightness" min="1" max="255">
+        </div>
+        <div class="field" id="speed-field">
+          <label for="speed">Speed <output id="speed-val"></output></label>
+          <input type="range" id="speed" min="0" max="255">
+        </div>
+      </div>
+
+      <!-- Live preview -->
+      <div class="field">
+        <div class="preview-head">
+          <span class="label">Preview</span>
+          <span id="individual-tools" hidden>
+            Click a light to paint it with the color ·
+            <button type="button" id="fill-all" class="link">Fill all</button>
+          </span>
+        </div>
+        <div id="preview" class="preview" aria-label="Live preview of the lights"></div>
+      </div>
+
+      <p id="status" class="status" role="status"></p>
+
+      <div class="row actions">
+        <button type="button" id="save" class="secondary">Save</button>
+        <button type="button" id="apply" class="primary">Apply</button>
+      </div>
+    </fieldset>
+
+    <p id="no-devices" class="empty" hidden>Add your first WLED device to get started.</p>
   </main>
 
-  <script>
-    fetch('/api/me')
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((u) => { document.getElementById('username').textContent = u.username; })
-      .catch(() => { window.location.href = '/'; });
-
-    document.getElementById('logout').addEventListener('click', async () => {
-      await fetch('/api/logout', { method: 'POST' });
-      window.location.href = '/';
-    });
-  </script>
+  <script src="/controls.js"></script>
 </body>
 </html>

@@ -1,6 +1,13 @@
 # WLED App
 
-A web app with user accounts. Right now it has sign-in and account creation.
+A web app for controlling WLED light controllers on your home network.
+
+- **Sign in / create account**
+- **Controls tab**: add your WLED devices by IP address, pick one from a dropdown, choose an effect
+  (Individual Light, Solid, Blink, Twinkle, Colorful), adjust color/brightness/speed, watch a live
+  5×5 preview, then **Save** the settings or **Apply** them to the lights.
+
+The app must run on a computer on the same network as your WLED controllers.
 
 ## Stack
 - **Node.js + Express**: the web server and API
@@ -30,9 +37,28 @@ Then open http://localhost:3000.
 | POST   | `/api/login`  | `{ username, password }`   | Sign in                     |
 | POST   | `/api/logout` |                            | Sign out                    |
 | GET    | `/api/me`     |                            | Current signed-in user      |
+| GET    | `/api/devices` |                           | List your devices           |
+| POST   | `/api/devices` | `{ name, host }`          | Add a device (local IP or `.local` name) |
+| DELETE | `/api/devices/:id` |                       | Remove a device             |
+| GET    | `/api/devices/:id/settings` |              | Saved settings (or defaults) |
+| PUT    | `/api/devices/:id/settings` | settings     | Save settings               |
+| POST   | `/api/devices/:id/apply` | settings        | Send settings to the WLED device |
+
+Settings: `{ effect, color: "#rrggbb", brightness: 1–255, speed: 0–255, pixels: [25 × "#rrggbb"] }`.
+
+### Effects → WLED
+| App effect | WLED |
+|---|---|
+| Individual Light | per-LED colors (`seg.i`) on the first 25 LEDs |
+| Solid | effect 0 |
+| Blink | effect 1 |
+| Twinkle | effect 17 |
+| Colorful | effect 34 |
 
 Rules: usernames are 3–32 characters (letters, numbers, `_ . -`) and unique regardless of case. Passwords need at least 8 characters.
 
 ## Database schema
 - `users`: `id`, `username`, `password_hash`, `created_at`
 - `sessions`: `token`, `user_id`, `expires_at` (7-day sign-in sessions, stored in a cookie)
+- `devices`: `id`, `user_id`, `name`, `host`, `created_at`
+- `device_settings`: `device_id`, `settings` (JSON), `updated_at`

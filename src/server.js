@@ -67,6 +67,8 @@ app.get('/api/me', (req, res) => {
   res.json(req.user);
 });
 
+app.use('/api/devices', require('./devices'));
+
 // Clean up expired sessions hourly.
 setInterval(() => q.deleteExpiredSessions.run(Date.now()), 60 * 60 * 1000).unref();
 
