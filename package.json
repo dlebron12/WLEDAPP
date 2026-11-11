@@ -1,0 +1,23 @@
+{
+  "name": "wledapp",
+  "version": "0.1.0",
+  "description": "WLED App",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dlebron12/wledapp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dlebron12/wledapp/issues"
+  },
+  "homepage": "https://github.com/dlebron12/wledapp#readme",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "express": "^4.22.3"
+  },
+  "private": true
+}

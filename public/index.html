@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WLED App – Sign in</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="card">
+    <h1 class="brand">WLED&nbsp;App</h1>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-mode="login" role="tab">Sign in</button>
+      <button class="tab" data-mode="signup" role="tab">Create account</button>
+    </div>
+
+    <form id="auth-form" novalidate>
+      <label>
+        Username
+        <input name="username" autocomplete="username" required>
+      </label>
+      <label>
+        Password
+        <input name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <label class="signup-only" hidden>
+        Confirm password
+        <input name="confirm" type="password" autocomplete="new-password">
+      </label>
+
+      <p id="message" class="message" role="alert"></p>
+      <button type="submit" id="submit">Sign in</button>
+    </form>
+  </main>
+
+  <script src="/auth.js"></script>
+</body>
+</html>

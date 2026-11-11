@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WLED App</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="card">
+    <h1 class="brand">WLED&nbsp;App</h1>
+    <p>Welcome, <strong id="username">…</strong>! You're signed in.</p>
+    <button id="logout" class="secondary">Sign out</button>
+  </main>
+
+  <script>
+    fetch('/api/me')
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((u) => { document.getElementById('username').textContent = u.username; })
+      .catch(() => { window.location.href = '/'; });
+
+    document.getElementById('logout').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/';
+    });
+  </script>
+</body>
+</html>
