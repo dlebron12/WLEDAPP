@@ -64,7 +64,17 @@ app.post('/api/logout', (req, res) => {
 
 app.get('/api/me', (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not signed in.' });
-  res.json(req.user);
+  const { id, username, created_at: createdAt, selected_device_id: selectedDeviceId } = req.user;
+  res.json({ id, username, createdAt, selectedDeviceId });
+});
+
+// Remembers which controller the user picked on the Controls tab.
+app.put('/api/me/selected-device', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not signed in.' });
+  const deviceId = Number(req.body?.deviceId);
+  if (!q.findDevice(deviceId, req.user.id)) return res.status(404).json({ error: 'Device not found.' });
+  q.setSelectedDevice.run(deviceId, req.user.id);
+  res.json({ selectedDeviceId: deviceId });
 });
 
 app.use('/api/devices', require('./devices'));

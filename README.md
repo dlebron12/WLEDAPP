@@ -3,22 +3,25 @@
 A web app for controlling WLED light controllers on your home network.
 
 - **Sign in / create account**
-- **Controls tab**: add your WLED controllers (found automatically on your network, or by IP
-  address), pick a device and a strip (or all strips), choose an effect (Individual Light, Solid,
-  Blink, Twinkle, Colorful), adjust color/brightness/speed, watch a live 5×5 preview, then **Save**
-  the settings or **Apply** them to the lights.
+- **Setup tab**: find WLED controllers on the network (no IP address needed) and add them, or add one
+  by IP address; edit each controller's strips (lights per strip), update its address, or remove it.
+- **Controls tab**: pick a controller from the dropdown (the choice is remembered), pick a strip (or
+  all strips), choose an effect (Individual Light, Solid, Blink, Twinkle, Colorful), adjust
+  color/brightness/speed, watch a live 5×5 preview, then **Save** the settings or **Apply** them to
+  the lights.
 
 The app must run on a computer on the same Wi-Fi as your WLED controllers.
 
 ### Finding controllers (no IP address needed)
-After a controller has joined the home Wi-Fi (setup steps 1–8), **+ Add → Find controllers on my
+After a controller has joined the home Wi-Fi (setup steps 1–8), **Setup → Find controllers on my
 network** lists every WLED controller on the network with its name, IP address, `.local` name and
-LED outputs. **Use** fills in the form, including one strip per LED output with its length.
+LED outputs. **Add** fills in the form, including one strip per LED output with its length.
 
 - It listens for the `_wled._tcp` mDNS announcement every WLED controller makes, and also scans
   the computer's local `/24` networks for `/json/info` in case the router blocks mDNS.
 - The controller's MAC address is saved. If the router later gives it a new IP address, **Apply**
-  finds it again by MAC, saves the new address and carries on.
+  finds it again by MAC, saves the new address and carries on. Setup also offers **Update address**
+  when a search finds an added controller at a new IP.
 
 ### Strips
 A controller drives one or more strips (one per LED output / data line), each with its own number of
@@ -59,7 +62,8 @@ Then open http://localhost:3000.
 | POST   | `/api/signup` | `{ username, password }`   | Create an account, sign in  |
 | POST   | `/api/login`  | `{ username, password }`   | Sign in                     |
 | POST   | `/api/logout` |                            | Sign out                    |
-| GET    | `/api/me`     |                            | Current signed-in user      |
+| GET    | `/api/me`     |                            | Current signed-in user (incl. `selectedDeviceId`) |
+| PUT    | `/api/me/selected-device` | `{ deviceId }`  | Remember the controller picked on Controls |
 | GET    | `/api/devices` |                           | List your devices           |
 | GET    | `/api/devices/discover` | `?scan=0` = mDNS only | Find WLED controllers on the network |
 | POST   | `/api/devices` | `{ name, host, stripLengths: [300, 250], mdns?, mac? }` | Add a device (local IP or `.local` name) |
@@ -85,7 +89,7 @@ Settings: `{ effect, color: "#rrggbb", brightness: 1–255, speed: 0–255, pixe
 Rules: usernames are 3–32 characters (letters, numbers, `_ . -`) and unique regardless of case. Passwords need at least 8 characters.
 
 ## Database schema
-- `users`: `id`, `username`, `password_hash`, `created_at`
+- `users`: `id`, `username`, `password_hash`, `created_at`, `selected_device_id` (last controller picked on Controls)
 - `sessions`: `token`, `user_id`, `expires_at` (7-day sign-in sessions, stored in a cookie)
 - `devices`: `id`, `user_id`, `name`, `host` (controller IP), `mdns` (`.local` name), `mac`, `created_at`
 - `strips`: `device_id`, `strip_number`, `length`, `settings` (JSON, empty until saved), `updated_at`

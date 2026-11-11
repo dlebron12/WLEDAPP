@@ -199,7 +199,6 @@ button.link {
 .status.ok { color: var(--ok); }
 .status.warn { color: #b26a00; }
 @media (prefers-color-scheme: dark) { .status.warn { color: #ffb84d; } }
-.empty { color: var(--muted); text-align: center; margin: 8px 0 0; }
 
 /* Live preview */
 .preview-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.85rem; color: var(--muted); }
@@ -236,7 +235,6 @@ button.link {
 .hint-inline { font-size: 0.8rem; opacity: 0.8; }
 
 /* Device form: discovery results and strip list */
-.find { display: grid; gap: 8px; justify-items: start; padding-bottom: 12px; border-bottom: 1px dashed var(--border); }
 .found-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; width: 100%; }
 .found-list:empty { display: none; }
 .found-list li {
@@ -253,3 +251,18 @@ button.link {
 .strip-list .remove { border: none; background: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; padding: 0 6px; }
 .strip-list .remove:disabled { visibility: hidden; }
 #add-strip { justify-self: start; }
+
+/* Setup tab */
+.intro { margin: -8px 0 20px; color: var(--muted); font-size: 0.92rem; }
+.setup-section { display: grid; gap: 10px; justify-items: start; padding: 18px 0; border-top: 1px solid var(--border); }
+.setup-section > * { max-width: 100%; }
+.setup-section .found-list, .setup-section .subform, .section-head { width: 100%; }
+.setup-section h3 { margin: 0; font-size: 1.05rem; }
+.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.found-list li .row { flex-wrap: wrap; justify-content: flex-end; }
+.subform { margin: 0; }
+
+/* Controls tab: nothing set up yet */
+.empty-state { display: grid; justify-items: center; gap: 12px; padding: 24px 0 8px; color: var(--muted); }
+.empty-state[hidden] { display: none; }
+.empty-state p { margin: 0; }

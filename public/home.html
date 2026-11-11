@@ -10,7 +10,8 @@
   <header class="topbar">
     <span class="brand small">WLED&nbsp;App</span>
     <nav class="tabs nav" role="tablist">
-      <button class="tab active" role="tab" aria-selected="true" data-tab="controls">Controls</button>
+      <button class="tab" role="tab" data-tab="controls" aria-controls="tab-controls">Controls</button>
+      <button class="tab" role="tab" data-tab="setup" aria-controls="tab-setup">Setup</button>
     </nav>
     <div class="account">
       <span id="username">…</span>
@@ -18,55 +19,27 @@
     </div>
   </header>
 
-  <main class="card wide" id="tab-controls" role="tabpanel">
+  <!-- ================= Controls ================= -->
+  <main class="card wide" id="tab-controls" role="tabpanel" hidden>
     <h2>Controls</h2>
 
-    <!-- Device -->
-    <div class="field">
-      <label for="device">Device</label>
-      <div class="row">
-        <select id="device"></select>
-        <button id="add-device-btn" class="secondary inline" type="button">+ Add</button>
-        <button id="edit-device-btn" class="secondary inline" type="button">Edit</button>
-        <button id="remove-device-btn" class="secondary inline" type="button" title="Remove this device">Remove</button>
-      </div>
+    <div class="field" id="device-field">
+      <label for="device">Controller</label>
+      <select id="device"></select>
       <p id="device-info" class="hint"></p>
     </div>
 
-    <form id="device-form" class="subform" hidden novalidate>
-      <strong id="device-form-title">Add device</strong>
-
-      <div class="find">
-        <button type="button" id="find-btn" class="secondary inline">Find controllers on my network</button>
-        <p class="hint" id="find-status">Your computer must be on the same Wi-Fi as the controller.</p>
-        <ul id="find-results" class="found-list"></ul>
-      </div>
-
-      <label>Name <input name="name" placeholder="Living room" maxlength="40" required></label>
-      <label>Controller IP address <input name="host" placeholder="192.168.1.50" required></label>
-
-      <div class="strips-edit">
-        <span class="label">Strips <span class="hint-inline">(one per data line; lights on each)</span></span>
-        <ol id="strip-list" class="strip-list"></ol>
-        <button type="button" id="add-strip" class="link">+ Add strip</button>
-      </div>
-      <p class="hint" id="device-form-total"></p>
-      <p class="message" id="device-form-error" role="alert"></p>
-
-      <div class="row">
-        <button type="submit" class="primary inline" id="device-form-submit">Add device</button>
-        <button type="button" id="cancel-device" class="secondary inline">Cancel</button>
-      </div>
-    </form>
+    <div id="no-devices" class="empty-state" hidden>
+      <p>No controllers set up yet.</p>
+      <button type="button" class="primary inline" data-goto="setup">Go to Setup</button>
+    </div>
 
     <fieldset id="settings" disabled hidden>
-      <!-- Strip -->
       <div class="field" id="strip-field">
         <label for="strip">Strip</label>
         <select id="strip"></select>
       </div>
 
-      <!-- Effects -->
       <div class="field">
         <label for="effect">Effects</label>
         <select id="effect">
@@ -93,7 +66,6 @@
         </div>
       </div>
 
-      <!-- Live preview -->
       <div class="field">
         <div class="preview-head">
           <span class="label">Preview <span id="preview-scale" class="hint-inline"></span></span>
@@ -112,10 +84,56 @@
         <button type="button" id="apply" class="primary">Apply</button>
       </div>
     </fieldset>
-
-    <p id="no-devices" class="empty" hidden>Add your first WLED device to get started.</p>
   </main>
 
+  <!-- ================= Setup ================= -->
+  <main class="card wide" id="tab-setup" role="tabpanel" hidden>
+    <h2>Setup</h2>
+    <p class="intro">
+      Connect each controller to the home Wi-Fi first (through the WLED network). Then, with this
+      computer on the same Wi-Fi, find it here and add it.
+    </p>
+
+    <section class="setup-section">
+      <h3>Find controllers</h3>
+      <button type="button" id="find-btn" class="primary inline">Find controllers on my network</button>
+      <p class="hint" id="find-status"></p>
+      <ul id="find-results" class="found-list"></ul>
+    </section>
+
+    <section class="setup-section">
+      <div class="section-head">
+        <h3>Your controllers</h3>
+        <button type="button" id="add-manual-btn" class="link">+ Add by IP address</button>
+      </div>
+      <ul id="controller-list" class="found-list"></ul>
+      <p id="controller-empty" class="hint">None yet. Find a controller above, or add one by IP address.</p>
+      <p id="setup-status" class="status" role="status"></p>
+
+      <form id="device-form" class="subform" hidden novalidate>
+        <strong id="device-form-title">Add controller</strong>
+        <p class="hint" id="device-form-source"></p>
+        <label>Name <input name="name" placeholder="Living room" maxlength="40" required></label>
+        <label>Controller IP address <input name="host" placeholder="192.168.1.50" required></label>
+
+        <div class="strips-edit">
+          <span class="label">Strips <span class="hint-inline">(one per data line; lights on each)</span></span>
+          <ol id="strip-list" class="strip-list"></ol>
+          <button type="button" id="add-strip" class="link">+ Add strip</button>
+        </div>
+        <p class="hint" id="device-form-total"></p>
+        <p class="message" id="device-form-error" role="alert"></p>
+
+        <div class="row">
+          <button type="submit" class="primary inline" id="device-form-submit">Add controller</button>
+          <button type="button" id="cancel-device" class="secondary inline">Cancel</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+  <script src="/setup.js"></script>
   <script src="/controls.js"></script>
 </body>
 </html>

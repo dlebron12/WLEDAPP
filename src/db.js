@@ -85,6 +85,11 @@ const MIGRATIONS = [
   ALTER TABLE devices ADD COLUMN mdns TEXT;  -- e.g. wled-ab12cd (reachable as wled-ab12cd.local)
   ALTER TABLE devices ADD COLUMN mac  TEXT;  -- lowercase hex without separators, e.g. a4cf12ab12cd
   `,
+
+  // 3: remember which controller each user last selected on the Controls tab.
+  `
+  ALTER TABLE users ADD COLUMN selected_device_id INTEGER REFERENCES devices(id) ON DELETE SET NULL;
+  `,
 ];
 
 const version = db.pragma('user_version', { simple: true });
@@ -139,7 +144,8 @@ const saveDevice = db.transaction(({ id, userId, name, host, mdns, mac, stripLen
 module.exports = {
   db,
   findUserByUsername: db.prepare('SELECT * FROM users WHERE username = ?'),
-  findUserById: db.prepare('SELECT id, username, created_at FROM users WHERE id = ?'),
+  findUserById: db.prepare('SELECT id, username, created_at, selected_device_id FROM users WHERE id = ?'),
+  setSelectedDevice: db.prepare('UPDATE users SET selected_device_id = ? WHERE id = ?'),
   insertUser: db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)'),
   insertSession: db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)'),
   findSession: db.prepare('SELECT * FROM sessions WHERE token = ? AND expires_at > ?'),
