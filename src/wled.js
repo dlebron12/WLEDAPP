@@ -45,8 +45,23 @@ function validateSettings(s) {
 
 const hexToRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 
-const MAX_STRIPS = 16;          // WLED's usual segment limit
-const MAX_STRIP_LENGTH = 1500;
+// Sanity limits only. The real limit on strips is the controller's own segment limit
+// (info.leds.maxseg, usually 16 or 32), which is checked when applying.
+const MAX_STRIPS = 256;
+const MAX_STRIP_LENGTH = 5000;
+
+// Thrown when the controller can't be reached at all (wrong/changed IP, powered off, timeout).
+class DeviceUnreachableError extends Error {}
+// Thrown when the controller answered but refused or can't do what was asked.
+class DeviceError extends Error {}
+
+// Where each strip starts: strip N begins right after strip N-1 ends.
+function stripOffsets(lengths) {
+  const offsets = [];
+  let total = 0;
+  for (const len of lengths) { offsets.push(total); total += len; }
+  return offsets;
+}
 
 // Spreads the 25 preview colors across a strip of `length` lights as WLED ranges:
 // [start, stop, "RRGGBB", ...] (stop is exclusive; indexes are relative to the segment).
@@ -66,17 +81,17 @@ function pixelRanges(pixels, length) {
 }
 
 // Builds the JSON bodies to POST to /json/state, in order, for a device and a list of
-// { number, settings } strips. Strip N is WLED segment N-1, covering lights
-// (N-1)*strip_length up to N*strip_length.
+// { number, settings } strips. Strip N is WLED segment N-1; it starts where strip N-1 ends.
 // WLED ignores per-LED colors sent in the same request that turns the lights on,
 // so Individual Light colors go in a second request.
-function buildRequests(device, strips, { removeExtraSegments = false } = {}) {
-  const len = device.strip_length;
+function buildRequests(device, strips, { removeExtraSegments = false, maxSegments = 16 } = {}) {
+  const lengths = device.stripLengths;
+  const offsets = stripOffsets(lengths);
   const segs = strips.map(({ number, settings: s }) => {
     const seg = {
       id: number - 1,
-      start: (number - 1) * len,
-      stop: number * len,
+      start: offsets[number - 1],
+      stop: offsets[number - 1] + lengths[number - 1],
       on: true,
       bri: s.brightness,
     };
@@ -92,13 +107,13 @@ function buildRequests(device, strips, { removeExtraSegments = false } = {}) {
   });
   if (removeExtraSegments) {
     // Delete leftover segments beyond the configured strips (stop: 0 deletes a segment).
-    for (let id = device.strip_count; id < MAX_STRIPS; id++) segs.push({ id, stop: 0 });
+    for (let id = lengths.length; id < maxSegments; id++) segs.push({ id, stop: 0 });
   }
 
   const requests = [{ on: true, bri: 255, seg: segs }];
   const individual = strips
     .filter(({ settings }) => settings.effect === 'individual')
-    .map(({ number, settings }) => ({ id: number - 1, i: pixelRanges(settings.pixels, len) }));
+    .map(({ number, settings }) => ({ id: number - 1, i: pixelRanges(settings.pixels, lengths[number - 1]) }));
   if (individual.length) requests.push({ seg: individual });
   return requests;
 }
@@ -121,20 +136,46 @@ function isLocalHost(host) {
   return /^[a-z0-9-]+$/i.test(name) || /^[a-z0-9-]+(\.[a-z0-9-]+)*\.local$/i.test(name);
 }
 
-// Sends the requests one after another (WLED handles sequential calls best).
-async function applyToDevice(device, strips, options) {
-  for (const body of buildRequests(device, strips, options)) {
-    const res = await fetch(`http://${device.host}/json/state`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+async function request(host, path, body) {
+  let res;
+  try {
+    res = await fetch(`http://${host}${path}`, {
+      method: body ? 'POST' : 'GET',
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(5000),
     });
-    if (!res.ok) throw new Error(`Device responded with HTTP ${res.status}.`);
+  } catch (e) {
+    throw new DeviceUnreachableError(e.name === 'TimeoutError' ? 'it didn\'t respond within 5 seconds' : 'it couldn\'t be reached');
   }
+  if (!res.ok) throw new DeviceError(`it responded with HTTP ${res.status}`);
+  return res.json().catch(() => ({}));
+}
+
+// Checks the controller's segment limit, then sends the requests one after another
+// (WLED handles sequential calls best).
+async function applyToDevice(device, strips, options = {}) {
+  const info = await request(device.host, '/json/info');
+  const maxSegments = info?.leds?.maxseg || 16;
+  if (device.stripCount > maxSegments) {
+    throw new DeviceError(
+      `this controller supports at most ${maxSegments} separately controlled ${maxSegments === 1 ? 'strip' : 'strips'}, ` +
+      `but ${device.stripCount} are set up. Reduce the number of strips with Edit`
+    );
+  }
+  for (const body of buildRequests(device, strips, { ...options, maxSegments })) {
+    await request(device.host, '/json/state', body);
+  }
+  // Lights beyond the controller's configured LED count are ignored by WLED: tell the user.
+  const ledCount = info?.leds?.count;
+  const warning = Number.isInteger(ledCount) && ledCount !== device.totalLights
+    ? `The app has ${device.totalLights.toLocaleString('en-US')} lights set up, but the controller is configured for ` +
+      `${ledCount.toLocaleString('en-US')}. Make them match (Edit here, or LED Preferences in WLED).`
+    : null;
+  return { warning };
 }
 
 module.exports = {
-  EFFECTS, DEFAULT_SETTINGS, MAX_STRIPS, MAX_STRIP_LENGTH,
-  validateSettings, pixelRanges, buildRequests, isLocalHost, applyToDevice,
+  EFFECTS, DEFAULT_SETTINGS, MAX_STRIPS, MAX_STRIP_LENGTH, DeviceUnreachableError, DeviceError,
+  validateSettings, stripOffsets, pixelRanges, buildRequests, isLocalHost, applyToDevice,
 };

@@ -43,6 +43,7 @@ $('logout').addEventListener('click', async () => {
 const currentDevice = () => devices.find((d) => String(d.id) === els.device.value);
 const settingsUrl = (suffix = 'settings') => `/api/devices/${els.device.value}/strips/${els.strip.value}/${suffix}`;
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const fmt = (n) => n.toLocaleString();
 
 async function loadDevices(selectId) {
   devices = await api('/api/devices');
@@ -67,23 +68,33 @@ async function loadDevices(selectId) {
 // Fills in the strip info line and the Strip dropdown for the selected device.
 function showDevice() {
   const d = currentDevice();
-  $('device-info').textContent =
-    `${plural(d.strip_count, 'strip')} × ${d.strip_length} lights = ${d.total_lights} lights total`;
+  const sum = d.stripCount > 1 ? `: ${d.stripLengths.map(fmt).join(' + ')}` : '';
+  $('device-info').textContent = `${plural(d.stripCount, 'strip')}${sum} = ${fmt(d.totalLights)} lights total`;
   els.strip.innerHTML = '';
-  if (d.strip_count > 1) els.strip.add(new Option('All strips', 'all'));
-  for (let n = 1; n <= d.strip_count; n++) {
-    const first = (n - 1) * d.strip_length + 1;
-    els.strip.add(new Option(`Strip ${n} (lights ${first}–${first + d.strip_length - 1})`, n));
-  }
+  if (d.stripCount > 1) els.strip.add(new Option('All strips', 'all'));
+  let first = 1;
+  d.stripLengths.forEach((len, i) => {
+    els.strip.add(new Option(`Strip ${i + 1}: ${fmt(len)} lights (${fmt(first)}–${fmt(first + len - 1)})`, i + 1));
+    first += len;
+  });
   els.strip.value = '1';
-  $('strip-field').hidden = d.strip_count === 1;
-  const perBulb = d.strip_length / 25;
-  $('preview-scale').textContent = perBulb === 1 ? '' :
-    `· each bulb ≈ ${Number.isInteger(perBulb) ? perBulb : perBulb.toFixed(1)} lights`;
+  $('strip-field').hidden = d.stripCount === 1;
+  updateScale();
+}
+
+// "each bulb ≈ 12 lights" for the selected strip (or the range across all strips).
+function updateScale() {
+  const d = currentDevice();
+  const lens = els.strip.value === 'all' ? d.stripLengths : [d.stripLengths[els.strip.value - 1]];
+  const per = (len) => { const v = len / GRID; return Number.isInteger(v) ? v : Number(v.toFixed(1)); };
+  const lo = per(Math.min(...lens));
+  const hi = per(Math.max(...lens));
+  $('preview-scale').textContent = hi <= 1 ? '' : `· each bulb ≈ ${lo === hi ? lo : `${lo}–${hi}`} lights`;
 }
 
 async function loadSettings() {
   els.settings.disabled = true;
+  updateScale();
   const { settings: s, savedAt } = await api(settingsUrl());
   settings = s;
   savedJson = JSON.stringify(s); // baseline for detecting unsaved edits
@@ -111,52 +122,148 @@ els.strip.addEventListener('change', () => {
   loadSettings().catch((e) => setStatus(e.message, 'error'));
 });
 
-// Add / edit form
+// ---------- Add / edit device form ----------
 let editingId = null;
+let discovered = { mdns: null, mac: null }; // from "Find controllers", sent with the form
+const formError = (text) => { $('device-form-error').textContent = text || ''; };
 
 function openForm(device) {
   editingId = device ? device.id : null;
+  discovered = { mdns: null, mac: null };
   $('device-form-title').textContent = device ? `Edit ${device.name}` : 'Add device';
   $('device-form-submit').textContent = device ? 'Save device' : 'Add device';
   els.form.name.value = device ? device.name : '';
   els.form.host.value = device ? device.host : '';
-  els.form.stripCount.value = device ? device.strip_count : 1;
-  els.form.stripLength.value = device ? device.strip_length : 300;
-  updateFormTotal();
+  setStripInputs(device ? device.stripLengths : [300]);
+  $('find-results').innerHTML = '';
+  $('find-status').textContent = 'Your computer must be on the same Wi-Fi as the controller.';
+  formError('');
   els.form.hidden = false;
   els.form.name.focus();
 }
 
-function updateFormTotal() {
-  const c = Number(els.form.stripCount.value) || 0;
-  const l = Number(els.form.stripLength.value) || 0;
-  $('device-form-total').textContent = `Total: ${(c * l).toLocaleString()} lights`;
+// The strips list: one number input per strip.
+function setStripInputs(lengths) {
+  const list = $('strip-list');
+  list.innerHTML = '';
+  lengths.forEach((len) => addStripInput(len));
+  updateFormTotal();
 }
-els.form.stripCount.addEventListener('input', updateFormTotal);
-els.form.stripLength.addEventListener('input', updateFormTotal);
+
+function addStripInput(len = 300) {
+  const list = $('strip-list');
+  const li = document.createElement('li');
+  li.innerHTML = `<span class="strip-name"></span>
+    <input type="number" min="1" max="5000" step="1" required aria-label="Lights on strip">
+    <span class="unit">lights</span>
+    <button type="button" class="remove" title="Remove strip" aria-label="Remove strip">×</button>`;
+  li.querySelector('input').value = len;
+  li.querySelector('input').addEventListener('input', updateFormTotal);
+  li.querySelector('.remove').addEventListener('click', () => { li.remove(); updateFormTotal(); });
+  list.appendChild(li);
+  updateFormTotal();
+}
+
+const stripInputValues = () => [...$('strip-list').querySelectorAll('input')].map((i) => Number(i.value));
+
+function updateFormTotal() {
+  const rows = [...$('strip-list').children];
+  rows.forEach((li, i) => {
+    li.querySelector('.strip-name').textContent = `Strip ${i + 1}`;
+    li.querySelector('.remove').disabled = rows.length === 1;
+  });
+  const total = stripInputValues().reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+  $('device-form-total').textContent = `Total: ${fmt(total)} lights on ${plural(rows.length, 'strip')}`;
+}
+
+$('add-strip').addEventListener('click', () => {
+  const vals = stripInputValues();
+  addStripInput(vals[vals.length - 1] || 300);
+  $('strip-list').lastElementChild.querySelector('input').focus();
+});
 
 $('add-device-btn').addEventListener('click', () => openForm(null));
 $('edit-device-btn').addEventListener('click', () => openForm(currentDevice()));
 $('cancel-device').addEventListener('click', () => { els.form.hidden = true; });
 
+// "Find controllers on my network"
+$('find-btn').addEventListener('click', async () => {
+  const btn = $('find-btn');
+  const results = $('find-results');
+  btn.disabled = true;
+  results.innerHTML = '';
+  $('find-status').textContent = 'Searching your network… this can take up to 15 seconds.';
+  try {
+    const found = await api('/api/devices/discover');
+    $('find-status').textContent = found.length
+      ? `Found ${plural(found.length, 'controller')}.`
+      : 'No controllers found. Check that the controller is powered on and connected to your Wi-Fi, ' +
+        'and that this computer is on the same Wi-Fi. You can still type the IP address below.';
+    for (const c of found) results.appendChild(foundItem(c));
+  } catch (e) {
+    $('find-status').textContent = e.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function foundItem(c) {
+  const li = document.createElement('li');
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const strips = c.outputs.length
+    ? `${plural(c.outputs.length, 'output')}: ${c.outputs.map(fmt).join(' + ')} lights`
+    : `${fmt(c.ledCount || 0)} lights`;
+  meta.innerHTML = '<strong></strong><span></span><span></span>';
+  meta.children[0].textContent = c.name;
+  meta.children[1].textContent = `${c.host}${c.mdns ? ` · ${c.mdns}.local` : ''}`;
+  meta.children[2].textContent = `${strips}${c.version ? ` · WLED ${c.version}` : ''}`;
+  li.appendChild(meta);
+
+  const isThisDevice = editingId && c.addedAs && c.addedAs.id === editingId;
+  if (c.addedAs && !isThisDevice) {
+    const note = document.createElement('span');
+    note.className = 'hint';
+    note.textContent = `Already added as "${c.addedAs.name}"`;
+    li.appendChild(note);
+  } else {
+    const use = document.createElement('button');
+    use.type = 'button';
+    use.className = 'primary inline';
+    use.textContent = 'Use';
+    use.addEventListener('click', () => {
+      if (!editingId || !els.form.name.value) els.form.name.value = c.name.slice(0, 40);
+      els.form.host.value = c.host;
+      if (c.outputs.length) setStripInputs(c.outputs);
+      else if (c.ledCount) setStripInputs([c.ledCount]);
+      discovered = { mdns: c.mdns, mac: c.mac };
+      $('find-status').textContent = `Filled in from "${c.name}". Check the strips, then ${editingId ? 'save' : 'add'} the device.`;
+      $('find-results').innerHTML = '';
+    });
+    li.appendChild(use);
+  }
+  return li;
+}
+
 els.form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  formError('');
   const body = {
     name: els.form.name.value,
     host: els.form.host.value,
-    stripCount: Number(els.form.stripCount.value),
-    stripLength: Number(els.form.stripLength.value),
+    stripLengths: stripInputValues(),
+    ...discovered,
   };
   const old = editingId && devices.find((d) => d.id === editingId);
-  if (old && body.stripCount < old.strip_count &&
-      !confirm(`Saved settings for strips ${body.stripCount + 1}–${old.strip_count} will be deleted. Continue?`)) return;
+  if (old && body.stripLengths.length < old.stripCount &&
+      !confirm(`Saved settings for ${old.stripCount - body.stripLengths.length === 1 ? `strip ${old.stripCount}` : `strips ${body.stripLengths.length + 1}–${old.stripCount}`} will be deleted. Continue?`)) return;
   try {
     const d = editingId
       ? await api(`/api/devices/${editingId}`, { method: 'PUT', body })
       : await api('/api/devices', { method: 'POST', body });
     els.form.hidden = true;
     await loadDevices(d.id);
-  } catch (err) { setStatus(err.message, 'error'); }
+  } catch (err) { formError(err.message); }
 });
 
 $('remove-device-btn').addEventListener('click', async () => {
@@ -217,10 +324,19 @@ $('save').addEventListener('click', async () => {
 $('apply').addEventListener('click', async () => {
   const btn = $('apply');
   btn.disabled = true;
-  setStatus('Sending to device…');
+  setStatus('Sending to the controller…');
   try {
-    await api(settingsUrl('apply'), { method: 'POST', body: settings });
-    setStatus(els.strip.value === 'all' ? 'Applied to all strips.' : `Applied to strip ${els.strip.value}.`, 'ok');
+    const r = await api(settingsUrl('apply'), { method: 'POST', body: settings });
+    let msg = els.strip.value === 'all' ? 'Applied to all strips.' : `Applied to strip ${els.strip.value}.`;
+    if (r.movedTo) {
+      // The router gave the controller a new IP address: we found it and saved the new one.
+      msg += ` The controller had moved to ${r.movedTo}; the app updated it.`;
+      const d = currentDevice();
+      d.host = r.movedTo;
+      els.device.selectedOptions[0].textContent = `${d.name} (${d.host})`;
+    }
+    if (r.warning) setStatus(`${msg} Warning: ${r.warning}`, 'warn');
+    else setStatus(msg, 'ok');
   } catch (e) {
     setStatus(e.message, 'error');
   } finally {

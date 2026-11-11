@@ -16,8 +16,9 @@
   },
   "homepage": "https://github.com/dlebron12/wledapp#readme",
   "dependencies": {
-    "express": "4.22.3",
-    "better-sqlite3": "13.0.3"
+    "better-sqlite3": "13.0.3",
+    "bonjour-service": "1.4.4",
+    "express": "4.22.3"
   },
   "private": true,
   "engines": {

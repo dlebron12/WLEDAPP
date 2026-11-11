@@ -33,15 +33,26 @@
       <p id="device-info" class="hint"></p>
     </div>
 
-    <form id="device-form" class="subform" hidden>
+    <form id="device-form" class="subform" hidden novalidate>
       <strong id="device-form-title">Add device</strong>
+
+      <div class="find">
+        <button type="button" id="find-btn" class="secondary inline">Find controllers on my network</button>
+        <p class="hint" id="find-status">Your computer must be on the same Wi-Fi as the controller.</p>
+        <ul id="find-results" class="found-list"></ul>
+      </div>
+
       <label>Name <input name="name" placeholder="Living room" maxlength="40" required></label>
       <label>Controller IP address <input name="host" placeholder="192.168.1.50" required></label>
-      <div class="grid-2">
-        <label>Number of strips <input name="stripCount" type="number" min="1" max="16" value="1" required></label>
-        <label>Lights per strip <input name="stripLength" type="number" min="1" max="1500" value="300" required></label>
+
+      <div class="strips-edit">
+        <span class="label">Strips <span class="hint-inline">(one per data line; lights on each)</span></span>
+        <ol id="strip-list" class="strip-list"></ol>
+        <button type="button" id="add-strip" class="link">+ Add strip</button>
       </div>
       <p class="hint" id="device-form-total"></p>
+      <p class="message" id="device-form-error" role="alert"></p>
+
       <div class="row">
         <button type="submit" class="primary inline" id="device-form-submit">Add device</button>
         <button type="button" id="cancel-device" class="secondary inline">Cancel</button>

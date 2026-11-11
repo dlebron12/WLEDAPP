@@ -3,32 +3,39 @@
 A web app for controlling WLED light controllers on your home network.
 
 - **Sign in / create account**
-- **Controls tab**: add your WLED controllers (IP address, number of strips, lights per strip), pick a
-  device and a strip (or all strips), choose an effect (Individual Light, Solid, Blink, Twinkle,
-  Colorful), adjust color/brightness/speed, watch a live 5×5 preview, then **Save** the settings or
-  **Apply** them to the lights.
+- **Controls tab**: add your WLED controllers (found automatically on your network, or by IP
+  address), pick a device and a strip (or all strips), choose an effect (Individual Light, Solid,
+  Blink, Twinkle, Colorful), adjust color/brightness/speed, watch a live 5×5 preview, then **Save**
+  the settings or **Apply** them to the lights.
+
+The app must run on a computer on the same Wi-Fi as your WLED controllers.
+
+### Finding controllers (no IP address needed)
+After a controller has joined the home Wi-Fi (setup steps 1–8), **+ Add → Find controllers on my
+network** lists every WLED controller on the network with its name, IP address, `.local` name and
+LED outputs. **Use** fills in the form, including one strip per LED output with its length.
+
+- It listens for the `_wled._tcp` mDNS announcement every WLED controller makes, and also scans
+  the computer's local `/24` networks for `/json/info` in case the router blocks mDNS.
+- The controller's MAC address is saved. If the router later gives it a new IP address, **Apply**
+  finds it again by MAC, saves the new address and carries on.
 
 ### Strips
-A controller can drive several strips (default **300 lights** each). The app treats each strip as its
-own section, a WLED *segment*, with its own effect and settings:
+A controller drives one or more strips (one per LED output / data line), each with its own number of
+lights (default **300**). Each strip is its own section, a WLED *segment*, with its own effect
+and settings. Strips are laid out one after another:
 
-| Strip | WLED segment | Lights |
+| Strip | WLED segment | Lights (example: 300 + 250 + 120) |
 |---|---|---|
 | 1 | 0 | 0–299 |
-| 2 | 1 | 300–599 |
-| N | N−1 | (N−1)×length … N×length−1 |
+| 2 | 1 | 300–549 |
+| 3 | 2 | 550–669 |
 
-Total lights = strips × lights per strip. Set the same total LED count in WLED itself
-(Config → LED Preferences). Applying to "All strips" also removes any extra WLED segments beyond
-the configured strips. For Individual Light, the 25 preview bulbs are spread evenly along the strip
-(300 lights → each bulb covers 12 lights).
-
-The app must run on a computer on the same network as your WLED controllers.
-
-## Stack
-- **Node.js + Express**: the web server and API
-- **SQLite** (via `better-sqlite3`): the database is a single file at `data/wledapp.db`, created automatically on first run
-- **scrypt** (built into Node): passwords are stored only as salted hashes, never as plain text
+Total lights = the sum of the strip lengths. It should match the LED count configured in WLED
+(Config → LED Preferences); **Apply** warns if it doesn't. The number of strips is limited only by
+the controller (its segment limit, usually 16 or 32), which is checked when applying. Applying to
+"All strips" also removes any extra WLED segments beyond the configured strips. For Individual
+Light, the 25 preview bulbs are spread evenly along each strip.
 
 ## Tool versions
 Exact versions are listed in `env.yaml` and enforced by:
@@ -54,7 +61,8 @@ Then open http://localhost:3000.
 | POST   | `/api/logout` |                            | Sign out                    |
 | GET    | `/api/me`     |                            | Current signed-in user      |
 | GET    | `/api/devices` |                           | List your devices           |
-| POST   | `/api/devices` | `{ name, host, stripCount, stripLength }` | Add a device (local IP or `.local` name) |
+| GET    | `/api/devices/discover` | `?scan=0` = mDNS only | Find WLED controllers on the network |
+| POST   | `/api/devices` | `{ name, host, stripLengths: [300, 250], mdns?, mac? }` | Add a device (local IP or `.local` name) |
 | PUT    | `/api/devices/:id` | same as above         | Edit a device               |
 | DELETE | `/api/devices/:id` |                       | Remove a device             |
 | GET    | `/api/devices/:id/strips/:strip/settings` | | Saved settings (or defaults) |
@@ -79,9 +87,10 @@ Rules: usernames are 3–32 characters (letters, numbers, `_ . -`) and unique re
 ## Database schema
 - `users`: `id`, `username`, `password_hash`, `created_at`
 - `sessions`: `token`, `user_id`, `expires_at` (7-day sign-in sessions, stored in a cookie)
-- `devices`: `id`, `user_id`, `name`, `host` (controller IP), `strip_count`, `strip_length`,
-  `total_lights` (computed: `strip_count × strip_length`), `created_at`
-- `strip_settings`: `device_id`, `strip_number`, `settings` (JSON), `updated_at`
+- `devices`: `id`, `user_id`, `name`, `host` (controller IP), `mdns` (`.local` name), `mac`, `created_at`
+- `strips`: `device_id`, `strip_number`, `length`, `settings` (JSON, empty until saved), `updated_at`
+
+The device's strip count and total lights are calculated from its strips.
 
 Schema changes are applied automatically at startup (`src/db.js`, tracked with SQLite's `user_version`),
 so an existing `data/wledapp.db` is upgraded in place.

@@ -56,6 +56,35 @@ const MIGRATIONS = [
     SELECT device_id, 1, settings, updated_at FROM device_settings;
   DROP TABLE device_settings;
   `,
+
+  // 2: each strip has its own length; remember the controller's mDNS name and MAC so it can be
+  //    found again if its IP address changes.
+  `
+  CREATE TABLE strips (
+    device_id    INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+    strip_number INTEGER NOT NULL,        -- 1-based; WLED segment id = strip_number - 1
+    length       INTEGER NOT NULL,        -- number of lights on this strip / data line
+    settings     TEXT,                    -- JSON { effect, color, brightness, speed, pixels }; NULL until saved
+    updated_at   TEXT,
+    PRIMARY KEY (device_id, strip_number)
+  );
+
+  -- Expand every device's equal-length strips into rows, keeping saved settings.
+  INSERT INTO strips (device_id, strip_number, length, settings, updated_at)
+    WITH RECURSIVE n(device_id, k, count, length) AS (
+      SELECT id, 1, strip_count, strip_length FROM devices
+      UNION ALL SELECT device_id, k + 1, count, length FROM n WHERE k < count
+    )
+    SELECT n.device_id, n.k, n.length, ss.settings, ss.updated_at
+    FROM n LEFT JOIN strip_settings ss ON ss.device_id = n.device_id AND ss.strip_number = n.k;
+  DROP TABLE strip_settings;
+
+  ALTER TABLE devices DROP COLUMN total_lights;
+  ALTER TABLE devices DROP COLUMN strip_count;
+  ALTER TABLE devices DROP COLUMN strip_length;
+  ALTER TABLE devices ADD COLUMN mdns TEXT;  -- e.g. wled-ab12cd (reachable as wled-ab12cd.local)
+  ALTER TABLE devices ADD COLUMN mac  TEXT;  -- lowercase hex without separators, e.g. a4cf12ab12cd
+  `,
 ];
 
 const version = db.pragma('user_version', { simple: true });
@@ -66,7 +95,46 @@ for (let v = version; v < MIGRATIONS.length; v++) {
   })();
 }
 
-const DEVICE_COLS = 'id, name, host, strip_count, strip_length, total_lights';
+// Devices with their strips. strip_lengths is a JSON array in strip order, e.g. [300, 250].
+const DEVICE_SELECT = `
+  SELECT d.id, d.name, d.host, d.mdns, d.mac,
+         (SELECT json_group_array(length) FROM (
+            SELECT length FROM strips WHERE device_id = d.id ORDER BY strip_number)) AS strip_lengths
+  FROM devices d`;
+
+// Turns a row into the shape the API returns.
+function toDevice(row) {
+  if (!row) return undefined;
+  const stripLengths = JSON.parse(row.strip_lengths);
+  return {
+    id: row.id, name: row.name, host: row.host, mdns: row.mdns, mac: row.mac,
+    stripLengths,
+    stripCount: stripLengths.length,
+    totalLights: stripLengths.reduce((a, b) => a + b, 0),
+  };
+}
+
+const stmt = {
+  listDevices: db.prepare(`${DEVICE_SELECT} WHERE d.user_id = ? ORDER BY d.name COLLATE NOCASE`),
+  findDevice: db.prepare(`${DEVICE_SELECT} WHERE d.id = ? AND d.user_id = ?`),
+  insertDevice: db.prepare('INSERT INTO devices (user_id, name, host, mdns, mac) VALUES (@userId, @name, @host, @mdns, @mac)'),
+  updateDevice: db.prepare('UPDATE devices SET name = @name, host = @host, mdns = @mdns, mac = @mac WHERE id = @id AND user_id = @userId'),
+  upsertStripLength: db.prepare(`
+    INSERT INTO strips (device_id, strip_number, length) VALUES (?, ?, ?)
+    ON CONFLICT(device_id, strip_number) DO UPDATE SET length = excluded.length
+  `),
+  deleteStripsAbove: db.prepare('DELETE FROM strips WHERE device_id = ? AND strip_number > ?'),
+};
+
+// Creates or updates a device and its strip lengths together. Returns the device id.
+const saveDevice = db.transaction(({ id, userId, name, host, mdns, mac, stripLengths }) => {
+  let deviceId = id;
+  if (id) stmt.updateDevice.run({ id, userId, name, host, mdns, mac });
+  else deviceId = stmt.insertDevice.run({ userId, name, host, mdns, mac }).lastInsertRowid;
+  stripLengths.forEach((len, i) => stmt.upsertStripLength.run(deviceId, i + 1, len));
+  stmt.deleteStripsAbove.run(deviceId, stripLengths.length); // forget removed strips
+  return deviceId;
+});
 
 module.exports = {
   db,
@@ -78,20 +146,17 @@ module.exports = {
   deleteSession: db.prepare('DELETE FROM sessions WHERE token = ?'),
   deleteExpiredSessions: db.prepare('DELETE FROM sessions WHERE expires_at <= ?'),
 
-  listDevices: db.prepare(`SELECT ${DEVICE_COLS} FROM devices WHERE user_id = ? ORDER BY name COLLATE NOCASE`),
-  findDevice: db.prepare(`SELECT ${DEVICE_COLS} FROM devices WHERE id = ? AND user_id = ?`),
-  insertDevice: db.prepare(
-    'INSERT INTO devices (user_id, name, host, strip_count, strip_length) VALUES (@userId, @name, @host, @stripCount, @stripLength)'
-  ),
-  updateDevice: db.prepare(
-    'UPDATE devices SET name = @name, host = @host, strip_count = @stripCount, strip_length = @stripLength WHERE id = @id AND user_id = @userId'
-  ),
+  listDevices: (userId) => stmt.listDevices.all(userId).map(toDevice),
+  findDevice: (id, userId) => toDevice(stmt.findDevice.get(id, userId)),
+  findDevicesByMac: db.prepare('SELECT id FROM devices WHERE user_id = ? AND mac = ?'),
+  saveDevice,
+  updateHost: db.prepare('UPDATE devices SET host = ? WHERE id = ?'),
   deleteDevice: db.prepare('DELETE FROM devices WHERE id = ? AND user_id = ?'),
 
-  getStripSettings: db.prepare('SELECT settings, updated_at FROM strip_settings WHERE device_id = ? AND strip_number = ?'),
-  upsertStripSettings: db.prepare(`
-    INSERT INTO strip_settings (device_id, strip_number, settings, updated_at) VALUES (?, ?, ?, datetime('now'))
-    ON CONFLICT(device_id, strip_number) DO UPDATE SET settings = excluded.settings, updated_at = excluded.updated_at
-  `),
-  deleteStripsAbove: db.prepare('DELETE FROM strip_settings WHERE device_id = ? AND strip_number > ?'),
+  getStripSettings: db.prepare(
+    'SELECT settings, updated_at FROM strips WHERE device_id = ? AND strip_number = ? AND settings IS NOT NULL'
+  ),
+  saveStripSettings: db.prepare(
+    "UPDATE strips SET settings = ?, updated_at = datetime('now') WHERE device_id = ? AND strip_number = ?"
+  ),
 };
