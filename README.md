@@ -19,7 +19,9 @@ network** lists every WLED controller on the network with its name, IP address, 
 LED outputs. **Add** fills in the form, including one strip per LED output with its length.
 
 - It listens for the `_wled._tcp` mDNS announcement every WLED controller makes, and also scans
-  the computer's local `/24` networks for `/json/info` in case the router blocks mDNS.
+  the computer's local network (its real size, up to 1,022 addresses) for `/json/info` in case the
+  router blocks mDNS. If nothing is found, the app says what it searched and what to check, and the
+  terminal running the app logs a `[discovery]` line with the details.
 - The controller's MAC address is saved. If the router later gives it a new IP address, **Apply**
   finds it again by MAC, saves the new address and carries on. Setup also offers **Update address**
   when a search finds an added controller at a new IP.

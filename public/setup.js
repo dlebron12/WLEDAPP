@@ -60,13 +60,18 @@
     const btn = $('find-btn');
     btn.disabled = true;
     $('find-results').innerHTML = '';
-    $('find-status').textContent = 'Searching your network… this can take up to 15 seconds.';
+    $('find-help').hidden = true;
+    $('find-status').textContent = 'Searching your network… this can take up to 30 seconds.';
     try {
-      lastFound = await api('/api/devices/discover');
+      const { controllers, searched } = await api('/api/devices/discover');
+      lastFound = controllers;
+      const where = searched.networks.length
+        ? `checked ${fmt(searched.addressesScanned)} addresses on ${searched.networks.join(', ')}`
+        : 'could not find a home network on the computer running the app';
       $('find-status').textContent = lastFound.length
         ? `Found ${plural(lastFound.length, 'controller')}.`
-        : 'No controllers found. Check that the controller is powered on and connected to the home Wi-Fi, ' +
-          'and that this computer is on the same Wi-Fi. You can also add it by IP address below.';
+        : `No controllers found. The app listened for WLED announcements (${searched.mdnsAnswers} answered) and ${where}.`;
+      if (!lastFound.length) showHelp(searched);
       renderFound();
     } catch (e) {
       $('find-status').textContent = e.message;
@@ -74,6 +79,23 @@
       btn.disabled = false;
     }
   });
+
+  // Troubleshooting list shown when nothing is found.
+  function showHelp(searched) {
+    const tips = [
+      'Is the controller powered on? Give it a minute after power-up or after saving the Wi-Fi settings.',
+      'Did it join the home Wi-Fi? If the phone still lists a "WLED-AP" network, the controller did not connect ' +
+        '(often a mistyped Wi-Fi password, or a 5 GHz-only network): join WLED-AP and enter the Wi-Fi details again.',
+      `Is the computer running the app (address ${searched.computerAddresses.join(', ') || 'unknown'}) on the same ` +
+        'Wi-Fi as the controller, not a guest network? Guest networks keep devices from seeing each other.',
+      'Look for the controller in your router\'s app or device list (often named "WLED" or "esp32"). ' +
+        'If it is there, use "+ Add by IP address" with the address the router shows.',
+    ];
+    const ul = $('find-help');
+    ul.innerHTML = '';
+    for (const t of tips) { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); }
+    ul.hidden = false;
+  }
 
   // Shows the discovery results, matched against the controllers already added.
   function renderFound() {
