@@ -7,7 +7,12 @@ const els = {
   brightnessVal: $('brightness-val'), speedVal: $('speed-val'),
   settings: $('settings'), preview: $('preview'), status: $('status'),
   noDevices: $('no-devices'), strip: $('strip'),
+  numLightsRp: $('num_lights_rp'), rpColors: $('rp-colors'),
 };
+
+// Repeated Pattern: the grid/house only shows the pattern after "Preview" is clicked.
+// rpShown is a snapshot { num_lights_rp, pattern } of what was previewed, or null.
+let rpShown = null;
 
 let settings = null;      // current (possibly unsaved) settings
 let savedJson = null;     // settings as last loaded/saved, to detect unsaved changes
@@ -85,6 +90,10 @@ function showStrips() {
 // "each bulb ≈ 12 lights" for the selected strip (or the range across all strips).
 function updateScale() {
   const d = currentDevice();
+  if (settings && settings.effect === 'repeated') {
+    $('preview-scale').textContent = '· the first 25 lights';
+    return;
+  }
   const lens = els.strip.value === 'all' ? d.stripLengths : [d.stripLengths[els.strip.value - 1]];
   const per = (len) => { const v = len / GRID; return Number.isInteger(v) ? v : Number(v.toFixed(1)); };
   const lo = per(Math.min(...lens));
@@ -98,6 +107,7 @@ async function loadSettings() {
   const { settings: s, savedAt } = await api(settingsUrl());
   settings = s;
   savedJson = JSON.stringify(s); // baseline for detecting unsaved edits
+  rpShown = null;
   syncInputs();
   els.settings.disabled = false;
   const which = els.strip.value === 'all' ? 'Strip 1 settings shown; Save/Apply will set every strip.' : '';
@@ -132,6 +142,8 @@ function syncInputs() {
   els.color.value = settings.color;
   els.brightness.value = settings.brightness;
   els.speed.value = settings.speed;
+  els.numLightsRp.value = String(settings.num_lights_rp);
+  renderPatternInputs();
   updateVisibility();
 }
 
@@ -139,9 +151,13 @@ function updateVisibility() {
   const e = settings.effect;
   els.brightnessVal.textContent = Math.round((settings.brightness / 255) * 100) + '%';
   els.speedVal.textContent = Math.round((settings.speed / 255) * 100) + '%';
-  $('speed-field').hidden = e === 'solid' || e === 'individual';
-  $('color-field').hidden = e === 'colorful';
+  $('speed-field').hidden = e === 'solid' || e === 'individual' || e === 'repeated';
+  $('color-field').hidden = e === 'colorful' || e === 'repeated';
   $('individual-tools').hidden = e !== 'individual';
+  $('rp-field').hidden = e !== 'repeated';
+  $('rp-box').hidden = e !== 'repeated';
+  updateRpNote();
+  updateScale();
   els.preview.classList.toggle('paintable', e === 'individual');
 }
 
@@ -154,10 +170,51 @@ function onChange() {
   settings.color = els.color.value;
   settings.brightness = Number(els.brightness.value);
   settings.speed = Number(els.speed.value);
+  const n = Number(els.numLightsRp.value);
+  if (n !== settings.num_lights_rp) {
+    settings.num_lights_rp = n;
+    renderPatternInputs();
+  }
   updateVisibility();
   updateStatus();
 }
-['effect', 'color', 'brightness', 'speed'].forEach((k) => els[k].addEventListener('input', onChange));
+['effect', 'color', 'brightness', 'speed', 'numLightsRp'].forEach((k) => els[k].addEventListener('input', onChange));
+
+// ---------- Repeated Pattern ----------
+// One color picker per light in the pattern (num_lights_rp of them).
+function renderPatternInputs() {
+  const n = settings.num_lights_rp;
+  $('rp-title').textContent = `Pattern for ${n} lights (lights 1–${n}, then it repeats)`;
+  els.rpColors.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const cell = document.createElement('label');
+    cell.className = 'rp-cell';
+    cell.innerHTML = `<input type="color" aria-label="Pattern light ${i + 1}"><span>${i + 1}</span>`;
+    const input = cell.querySelector('input');
+    input.value = settings.pattern[i];
+    input.addEventListener('input', () => {
+      settings.pattern[i] = input.value;
+      updateRpNote();
+      updateStatus();
+    });
+    els.rpColors.appendChild(cell);
+  }
+}
+
+const rpSnapshot = () => ({ num_lights_rp: settings.num_lights_rp, pattern: settings.pattern.slice(0, settings.num_lights_rp) });
+
+function updateRpNote() {
+  if (!settings || settings.effect !== 'repeated') return;
+  const current = JSON.stringify(rpSnapshot());
+  $('rp-note').textContent = !rpShown ? 'Click Preview to see the pattern on the lights below.'
+    : JSON.stringify(rpShown) === current ? 'Showing this pattern below.'
+      : 'Pattern changed: click Preview to update.';
+}
+
+$('rp-preview').addEventListener('click', () => {
+  rpShown = rpSnapshot();
+  updateRpNote();
+});
 
 $('fill-all').addEventListener('click', () => {
   settings.pixels = Array(GRID).fill(settings.color);
@@ -214,6 +271,36 @@ for (let i = 0; i < GRID; i++) {
   bulbs.push(b.querySelector('.glow')); // paintBulb lights the glow; the number stays readable
 }
 
+// ---------- Grid / House view ----------
+// House view: the 25 lights spaced evenly along the roofline drawn in the SVG
+// (same coordinates: a 160 x 100 box), sitting just above the roof edge.
+const ROOFLINE = [[12, 60], [50, 31], [68, 45], [92, 22], [148, 60]];
+function pointsAlong(line, count) {
+  const segs = line.slice(1).map((p, i) => ({ a: line[i], b: p, len: Math.hypot(p[0] - line[i][0], p[1] - line[i][1]) }));
+  const total = segs.reduce((sum, sg) => sum + sg.len, 0);
+  return Array.from({ length: count }, (_, k) => {
+    let d = (total * (k + 0.5)) / count;
+    const sg = segs.find((x) => (d <= x.len ? true : ((d -= x.len), false))) || segs[segs.length - 1];
+    const t = Math.min(1, d / sg.len);
+    return [sg.a[0] + (sg.b[0] - sg.a[0]) * t, sg.a[1] + (sg.b[1] - sg.a[1]) * t - 1.6];
+  });
+}
+pointsAlong(ROOFLINE, GRID).forEach(([x, y], i) => {
+  const el = els.preview.querySelectorAll('.bulb')[i];
+  el.style.setProperty('--hx', `${(x / 160) * 100}%`);
+  el.style.setProperty('--hy', `${y}%`);
+});
+
+function setView(view) {
+  els.preview.classList.toggle('house', view === 'house');
+  document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+  try { localStorage.setItem('previewView', view); } catch { /* not available: fine */ }
+}
+document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
+let savedView = 'grid';
+try { savedView = localStorage.getItem('previewView') || 'grid'; } catch { /* use grid */ }
+setView(savedView === 'house' ? 'house' : 'grid');
+
 // WLED's "Colorful" palette: red, amber, green, blue marching along the strip.
 const COLORFUL = ['#ff2000', '#ffaa00', '#00ff40', '#0040ff'];
 // Per-bulb random phase/rate so Twinkle looks organic.
@@ -244,6 +331,10 @@ function frame(t) {
           level = v > 0.3 ? (v - 0.3) / 0.7 : 0;
           break;
         }
+        case 'repeated':
+          if (rpShown) c = rpShown.pattern[i % rpShown.num_lights_rp];
+          else level = 0; // nothing previewed yet
+          break;
         case 'colorful': {
           const step = Math.floor((t / 1000) * sf * 3);
           c = COLORFUL[(i + step) % COLORFUL.length];

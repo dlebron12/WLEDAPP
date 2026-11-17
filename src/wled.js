@@ -5,7 +5,8 @@ const GRID_SIZE = 25; // 5 x 5 preview = first 25 LEDs on the strip
 
 // App effect name -> WLED effect ID (see wled00/FX.h). "individual" uses per-LED control instead.
 const EFFECTS = {
-  individual: null,
+  individual: null, // per-LED colors (seg.i), 25 preview bulbs spread along the strip
+  repeated: null,   // per-LED colors (seg.i): a pattern of num_lights_rp colors repeated along the strip
   solid: 0,
   blink: 1,
   twinkle: 17,
@@ -20,7 +21,13 @@ const DEFAULT_SETTINGS = {
   brightness: 200,
   speed: 128,
   pixels: Array(GRID_SIZE).fill('#ffaa33'),
+  // Repeated Pattern: the pattern is num_lights_rp lights long; pattern holds up to 10 colors.
+  num_lights_rp: 2,
+  pattern: ['#ff0000', '#00c853', '#2962ff', '#ffffff', '#ffd600', '#aa00ff', '#ff6d00', '#00e5ff', '#ff4081', '#76ff03'],
 };
+
+const RP_OPTIONS = [2, 3, 5, 10]; // allowed values of num_lights_rp
+const RP_MAX = 10;
 
 // Returns cleaned settings, or throws an Error with a user-facing message.
 function validateSettings(s) {
@@ -34,12 +41,21 @@ function validateSettings(s) {
   if (!Array.isArray(s.pixels) || s.pixels.length !== GRID_SIZE || !s.pixels.every((c) => HEX_RE.test(c))) {
     throw new Error(`Individual lights must be ${GRID_SIZE} colors like #RRGGBB.`);
   }
+  // Settings saved before Repeated Pattern existed don't have these: use the defaults.
+  const numLightsRp = s.num_lights_rp == null ? DEFAULT_SETTINGS.num_lights_rp : Number(s.num_lights_rp);
+  if (!RP_OPTIONS.includes(numLightsRp)) throw new Error(`Repeat every must be ${RP_OPTIONS.join(', ')} lights.`);
+  const pattern = s.pattern == null ? DEFAULT_SETTINGS.pattern : s.pattern;
+  if (!Array.isArray(pattern) || pattern.length !== RP_MAX || !pattern.every((c) => HEX_RE.test(c))) {
+    throw new Error(`The pattern must be ${RP_MAX} colors like #RRGGBB.`);
+  }
   return {
     effect: s.effect,
     color: s.color.toLowerCase(),
     brightness,
     speed,
     pixels: s.pixels.map((c) => c.toLowerCase()),
+    num_lights_rp: numLightsRp,
+    pattern: pattern.map((c) => c.toLowerCase()),
   };
 }
 
@@ -80,6 +96,15 @@ function pixelRanges(pixels, length) {
   return out;
 }
 
+// WLED takes at most ~256 per-LED colors per request: "i": [startIndex, "RRGGBB", "RRGGBB", ...]
+// sets consecutive LEDs from startIndex (relative to the segment).
+const LED_CHUNK = 256;
+
+// The colors of a strip of `length` lights with the first `n` pattern colors repeated.
+function repeatedColors(pattern, n, length) {
+  return Array.from({ length }, (_, k) => pattern[k % n].slice(1).toUpperCase());
+}
+
 // Builds the JSON bodies to POST to /json/state, in order, for a device and a list of
 // { number, settings } strips. Strip N is WLED segment N-1; it starts where strip N-1 ends.
 // WLED ignores per-LED colors sent in the same request that turns the lights on,
@@ -95,8 +120,8 @@ function buildRequests(device, strips, { removeExtraSegments = false, maxSegment
       on: true,
       bri: s.brightness,
     };
-    if (s.effect === 'individual') {
-      seg.fx = EFFECTS.solid;
+    if (s.effect === 'individual' || s.effect === 'repeated') {
+      seg.fx = EFFECTS.solid; // per-LED colors are sent in the following requests
     } else {
       seg.fx = EFFECTS[s.effect];
       seg.frz = false; // un-freeze in case Individual Light was used before
@@ -115,6 +140,14 @@ function buildRequests(device, strips, { removeExtraSegments = false, maxSegment
     .filter(({ settings }) => settings.effect === 'individual')
     .map(({ number, settings }) => ({ id: number - 1, i: pixelRanges(settings.pixels, lengths[number - 1]) }));
   if (individual.length) requests.push({ seg: individual });
+
+  // Repeated Pattern: every light gets its color, in chunks of LED_CHUNK per request.
+  for (const { number, settings } of strips.filter((x) => x.settings.effect === 'repeated')) {
+    const colors = repeatedColors(settings.pattern, settings.num_lights_rp, lengths[number - 1]);
+    for (let start = 0; start < colors.length; start += LED_CHUNK) {
+      requests.push({ seg: [{ id: number - 1, i: [start, ...colors.slice(start, start + LED_CHUNK)] }] });
+    }
+  }
   return requests;
 }
 
@@ -184,6 +217,6 @@ async function applyToDevice(device, strips, options = {}) {
 }
 
 module.exports = {
-  EFFECTS, DEFAULT_SETTINGS, MAX_STRIPS, MAX_STRIP_LENGTH, DeviceUnreachableError, DeviceError,
-  validateSettings, stripOffsets, pixelRanges, buildRequests, isLocalHost, applyToDevice, request, looksLikeWled,
+  EFFECTS, DEFAULT_SETTINGS, RP_OPTIONS, MAX_STRIPS, MAX_STRIP_LENGTH, DeviceUnreachableError, DeviceError,
+  validateSettings, stripOffsets, pixelRanges, repeatedColors, buildRequests, isLocalHost, applyToDevice, request, looksLikeWled,
 };

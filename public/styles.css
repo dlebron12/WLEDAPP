@@ -331,3 +331,45 @@ input[type="file"] { max-width: 100%; font-size: 0.85rem; }
   background: var(--card); color: var(--text); font: inherit; font-size: 0.88rem; cursor: pointer;
 }
 .chip.active { border-color: var(--accent); outline: 1px solid var(--accent); }
+
+/* Preview header: label + Grid / House switch */
+.preview-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.segmented button {
+  padding: 5px 14px; border: none; background: transparent; color: var(--muted);
+  font: inherit; font-size: 0.85rem; cursor: pointer;
+}
+.segmented button + button { border-left: 1px solid var(--border); }
+.segmented button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
+
+/* Repeated Pattern editor */
+.pattern-box { display: grid; gap: 10px; margin-bottom: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); }
+.pattern-box[hidden] { display: none; }
+.rp-colors { display: flex; flex-wrap: wrap; gap: 8px; }
+.rp-cell { display: grid; justify-items: center; gap: 2px; font-size: 0.8rem; color: var(--muted); cursor: pointer; }
+.rp-cell input[type="color"] { width: 44px; height: 44px; padding: 2px; border-radius: 8px; }
+.rp-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rp-actions .hint { margin: 0; }
+
+/* Grid view hides the house drawing */
+.preview .house-art { display: none; }
+
+/* House view: night scene; lights placed along the roofline (--hx / --hy from controls.js) */
+.preview.house {
+  display: block;
+  position: relative;
+  aspect-ratio: 16 / 10;
+  padding: 0;
+  overflow: hidden;
+}
+.preview.house .house-art { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+.preview.house .bulb {
+  position: absolute;
+  left: var(--hx);
+  top: var(--hy);
+  width: 3.4%;
+  max-width: none;
+  transform: translate(-50%, -50%);
+}
+.preview.house .bulb .num { display: none; }
+.preview.house.paintable .bulb:hover { outline-offset: 2px; }

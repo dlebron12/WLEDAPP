@@ -107,7 +107,7 @@ router.delete('/:id', (req, res) => {
 router.get('/:id/strips/:strip/settings', (req, res) => {
   const row = q.getStripSettings.get(req.device.id, req.stripNumbers[0]);
   res.json({
-    settings: row ? JSON.parse(row.settings) : wled.DEFAULT_SETTINGS,
+    settings: { ...wled.DEFAULT_SETTINGS, ...(row ? JSON.parse(row.settings) : {}) }, // fills newer fields
     savedAt: row ? row.updated_at : null,
   });
 });

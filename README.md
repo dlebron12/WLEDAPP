@@ -7,8 +7,9 @@ Light Ops Permanent Lighting's web app for controlling WLED light controllers on
   by IP address; edit each controller's strips (lights per strip), update its address, remove it, or
   **Set up controller** (writes the standard LED settings and presets; see below).
 - **Controls tab**: pick a controller from the dropdown (the choice is remembered), pick a strip (or
-  all strips), choose an effect (Individual Light, Solid, Blink, Twinkle, Colorful), adjust
-  color/brightness/speed, watch a live 5×5 preview, then **Save** the settings or **Apply** them to
+  all strips), choose an effect (Individual Light, Solid, Blink, Twinkle, Colorful, Repeated Pattern),
+  adjust color/brightness/speed, watch a live preview of 25 lights (as a 5×5 grid or along a
+  house's roofline), then **Save** the settings or **Apply** them to
   the lights.
 
 The app must run on a computer on the same Wi-Fi as your WLED controllers.
@@ -112,7 +113,7 @@ phone back to the home Wi-Fi afterwards.
 
 `:strip` is a strip number (1, 2, …) or `all`.
 
-Settings: `{ effect, color: "#rrggbb", brightness: 1–255, speed: 0–255, pixels: [25 × "#rrggbb"] }`.
+Settings: `{ effect, color: "#rrggbb", brightness: 1–255, speed: 0–255, pixels: [25 × "#rrggbb"], num_lights_rp: 2|3|5|10, pattern: [10 × "#rrggbb"] }`.
 
 ### Effects → WLED
 | App effect | WLED |
@@ -122,6 +123,7 @@ Settings: `{ effect, color: "#rrggbb", brightness: 1–255, speed: 0–255, pixe
 | Blink | effect 1 |
 | Twinkle | effect 17 |
 | Colorful | effect 34 |
+| Repeated Pattern | per-LED colors (`seg.i`): a pattern of `num_lights_rp` (2, 3, 5 or 10) colors repeated along every light of the strip, sent 256 lights per request |
 
 Rules: usernames are 3–32 characters (letters, numbers, `_ . -`) and unique regardless of case. Passwords need at least 8 characters.
 
