@@ -152,7 +152,7 @@ function updateVisibility() {
   els.brightnessVal.textContent = Math.round((settings.brightness / 255) * 100) + '%';
   els.speedVal.textContent = Math.round((settings.speed / 255) * 100) + '%';
   $('speed-field').hidden = e === 'solid' || e === 'individual' || e === 'repeated';
-  $('color-field').hidden = e === 'colorful' || e === 'repeated';
+  $('color-field').hidden = e === 'colorful' || e === 'repeated' || e === 'individual';
   $('individual-tools').hidden = e !== 'individual';
   $('rp-field').hidden = e !== 'repeated';
   $('rp-box').hidden = e !== 'repeated';
@@ -216,10 +216,7 @@ $('rp-preview').addEventListener('click', () => {
   updateRpNote();
 });
 
-$('fill-all').addEventListener('click', () => {
-  settings.pixels = Array(GRID).fill(settings.color);
-  updateStatus();
-});
+$('fill-all').addEventListener('click', (e) => openLightPicker('all', e.currentTarget));
 
 // ---------- Save / Apply ----------
 $('save').addEventListener('click', async () => {
@@ -264,12 +261,45 @@ for (let i = 0; i < GRID; i++) {
   b.innerHTML = `<span class="glow"></span><span class="num">${i + 1}</span>`;
   b.addEventListener('click', () => {
     if (!settings || settings.effect !== 'individual') return;
-    settings.pixels[i] = settings.color;
-    updateStatus();
+    openLightPicker(i, b);
   });
   els.preview.appendChild(b);
   bulbs.push(b.querySelector('.glow')); // paintBulb lights the glow; the number stays readable
 }
+
+// ---------- Individual Light: color picker per light ----------
+// One shared color input. Tapping a light places it over that light and opens it, so the
+// system color picker appears next to the light (a sheet on phones). target is the light's
+// index, or 'all' for "Fill all lights".
+const picker = $('light-picker');
+let pickerTarget = null;
+let pickerAnchor = null;
+
+function openLightPicker(target, anchor) {
+  pickerTarget = target;
+  if (pickerAnchor) pickerAnchor.classList.remove('picking');
+  pickerAnchor = anchor;
+  anchor.classList.add('picking');
+  picker.value = target === 'all' ? settings.pixels[0] : settings.pixels[target];
+  const r = anchor.getBoundingClientRect();
+  Object.assign(picker.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+  try { picker.showPicker(); } catch { picker.click(); } // older browsers: click opens it
+}
+
+picker.addEventListener('input', () => {
+  if (pickerTarget === null || !settings) return;
+  if (pickerTarget === 'all') settings.pixels = Array(GRID).fill(picker.value);
+  else settings.pixels[pickerTarget] = picker.value;
+  updateStatus();
+});
+// Done (a color was chosen) or dismissed: stop outlining the light.
+function closeLightPicker() {
+  if (pickerAnchor) pickerAnchor.classList.remove('picking');
+  pickerAnchor = null;
+  pickerTarget = null;
+}
+picker.addEventListener('change', closeLightPicker);
+picker.addEventListener('blur', closeLightPicker);
 
 // ---------- Grid / House view ----------
 // House view: the 25 lights spaced evenly along the roofline drawn in the SVG

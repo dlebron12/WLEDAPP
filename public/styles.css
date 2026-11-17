@@ -373,3 +373,7 @@ input[type="file"] { max-width: 100%; font-size: 0.85rem; }
 }
 .preview.house .bulb .num { display: none; }
 .preview.house.paintable .bulb:hover { outline-offset: 2px; }
+
+/* Individual Light: the per-light color picker (invisible; positioned over the tapped light) */
+.light-picker { position: fixed; opacity: 0; pointer-events: none; border: 0; padding: 0; z-index: -1; }
+.preview.paintable .bulb.picking { outline: 3px solid #fff; outline-offset: 3px; border-radius: 50%; }

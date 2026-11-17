@@ -99,9 +99,11 @@
           </div>
         </div>
         <div id="individual-tools" class="paint-instruction" hidden>
-          <strong>Click a light to paint it with the color</strong>
-          <button type="button" id="fill-all" class="link">Fill all lights with the color</button>
+          <strong>Tap a light to choose its color</strong>
+          <button type="button" id="fill-all" class="link">Fill all lights with one color</button>
         </div>
+        <!-- Individual Light: the color picker opened for the light that was tapped -->
+        <input type="color" id="light-picker" class="light-picker" tabindex="-1" aria-label="Color for the selected light">
         <div id="preview" class="preview" aria-label="Live preview of the lights">
           <!-- House view backdrop: night sky, house, roofline (lights are placed along it) -->
           <svg class="house-art" viewBox="0 0 160 100" preserveAspectRatio="none" aria-hidden="true">
