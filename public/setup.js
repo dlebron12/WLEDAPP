@@ -118,7 +118,7 @@
       li.innerHTML = '<div class="meta"><strong></strong><span></span><span></span></div>';
       const [name, addr, info] = li.querySelector('.meta').children;
       name.textContent = c.name;
-      addr.textContent = `${c.host}${c.mdns ? ` · ${c.mdns}.local` : ''}`;
+      addr.textContent = `IP address: ${c.host}${c.mdns ? ` · ${c.mdns}.local` : ''}`;
       info.textContent = `${outputs}${c.version ? ` · WLED ${c.version}` : ''}`;
 
       if (!added) {
@@ -141,7 +141,7 @@
       li.innerHTML = '<div class="meta"><strong></strong><span></span><span></span></div>';
       const [name, addr, why] = li.querySelector('.meta').children;
       name.textContent = n.name;
-      addr.textContent = `${n.host}${n.mdns ? ` · ${n.mdns}.local` : ''}`;
+      addr.textContent = `IP address: ${n.host}${n.mdns ? ` · ${n.mdns}.local` : ''}`;
       why.textContent = `Didn't answer: ${n.reason}. You can still add it with this address.`;
       const added = App.devices.find((d) => (n.mac && d.mac === n.mac) || d.host === n.host);
       if (added) li.appendChild(note(`Added as "${added.name}"`));
@@ -200,9 +200,35 @@
     formError('');
     setupStatus('');
     $('setup-panel').hidden = true;
+    showHeardSuggestions(!device && !found);
     form.hidden = false;
     form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     form.name.focus({ preventScroll: true });
+  }
+
+  // For "+ Add by IP address": list the controllers the last search heard (with their IP
+  // addresses) that aren't added yet; tapping one fills in the form.
+  function showHeardSuggestions(show) {
+    const box = $('heard-suggestions');
+    const list = $('heard-list');
+    list.innerHTML = '';
+    const isAdded = (c) => App.devices.some((d) => (c.mac && d.mac === c.mac) || d.host === c.host);
+    const heard = [...lastFound, ...lastNotResponding].filter((c) => !isAdded(c));
+    box.hidden = !show || heard.length === 0;
+    for (const c of heard) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip';
+      b.textContent = `${c.name} · ${c.host}`;
+      b.addEventListener('click', () => {
+        form.name.value = form.name.value || c.name.slice(0, 40);
+        form.host.value = c.host;
+        discovered = { mdns: c.mdns || null, mac: c.mac || null };
+        if (c.outputs && c.outputs.length) setStripInputs(c.outputs);
+        list.querySelectorAll('.chip').forEach((x) => x.classList.toggle('active', x === b));
+      });
+      list.appendChild(b);
+    }
   }
 
   function setStripInputs(lengths) {

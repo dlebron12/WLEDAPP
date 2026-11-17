@@ -118,6 +118,10 @@
       <form id="device-form" class="subform" hidden novalidate>
         <strong id="device-form-title">Add controller</strong>
         <p class="hint" id="device-form-source"></p>
+        <div id="heard-suggestions" hidden>
+          <span class="label">Heard on your network <span class="hint-inline">(tap to use its IP address)</span></span>
+          <div id="heard-list" class="chips"></div>
+        </div>
         <label>Name <input name="name" placeholder="Living room" maxlength="40" required></label>
         <label>Controller IP address <input name="host" placeholder="192.168.1.50" required></label>
 

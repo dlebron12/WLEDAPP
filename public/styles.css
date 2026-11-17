@@ -290,3 +290,10 @@ input[type="file"] { max-width: 100%; font-size: 0.85rem; }
 .help-list { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; font-size: 0.88rem; color: var(--muted); }
 .help-list[hidden] { display: none; }
 .found-list li.not-responding { border-style: dashed; }
+#heard-suggestions[hidden] { display: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip {
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--card); color: var(--text); font: inherit; font-size: 0.88rem; cursor: pointer;
+}
+.chip.active { border-color: var(--accent); outline: 1px solid var(--accent); }
