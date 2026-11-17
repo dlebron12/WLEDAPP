@@ -90,6 +90,12 @@ const MIGRATIONS = [
   `
   ALTER TABLE users ADD COLUMN selected_device_id INTEGER REFERENCES devices(id) ON DELETE SET NULL;
   `,
+
+  // 4: when the app last wrote the standard LED setup to the controller ("Set up controller").
+  `
+  ALTER TABLE devices ADD COLUMN configured_at TEXT;
+  ALTER TABLE devices ADD COLUMN configured_lengths TEXT; -- JSON strip lengths written at that time
+  `,
 ];
 
 const version = db.pragma('user_version', { simple: true });
@@ -102,7 +108,7 @@ for (let v = version; v < MIGRATIONS.length; v++) {
 
 // Devices with their strips. strip_lengths is a JSON array in strip order, e.g. [300, 250].
 const DEVICE_SELECT = `
-  SELECT d.id, d.name, d.host, d.mdns, d.mac,
+  SELECT d.id, d.name, d.host, d.mdns, d.mac, d.configured_at, d.configured_lengths,
          (SELECT json_group_array(length) FROM (
             SELECT length FROM strips WHERE device_id = d.id ORDER BY strip_number)) AS strip_lengths
   FROM devices d`;
@@ -114,6 +120,9 @@ function toDevice(row) {
   return {
     id: row.id, name: row.name, host: row.host, mdns: row.mdns, mac: row.mac,
     stripLengths,
+    // Set up with the current strips? (false if strips were edited after the last setup)
+    configuredAt: row.configured_at,
+    setupCurrent: Boolean(row.configured_at) && row.configured_lengths === JSON.stringify(stripLengths),
     stripCount: stripLengths.length,
     totalLights: stripLengths.reduce((a, b) => a + b, 0),
   };
@@ -157,6 +166,7 @@ module.exports = {
   findDevicesByMac: db.prepare('SELECT id FROM devices WHERE user_id = ? AND mac = ?'),
   saveDevice,
   updateHost: db.prepare('UPDATE devices SET host = ? WHERE id = ?'),
+  markConfigured: db.prepare("UPDATE devices SET configured_at = datetime('now'), configured_lengths = ? WHERE id = ?"),
   deleteDevice: db.prepare('DELETE FROM devices WHERE id = ? AND user_id = ?'),
 
   getStripSettings: db.prepare(

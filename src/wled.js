@@ -177,5 +177,5 @@ async function applyToDevice(device, strips, options = {}) {
 
 module.exports = {
   EFFECTS, DEFAULT_SETTINGS, MAX_STRIPS, MAX_STRIP_LENGTH, DeviceUnreachableError, DeviceError,
-  validateSettings, stripOffsets, pixelRanges, buildRequests, isLocalHost, applyToDevice,
+  validateSettings, stripOffsets, pixelRanges, buildRequests, isLocalHost, applyToDevice, request,
 };

@@ -133,6 +133,32 @@
           <button type="button" id="cancel-device" class="secondary inline">Cancel</button>
         </div>
       </form>
+
+      <form id="setup-panel" class="subform" hidden novalidate>
+        <strong id="setup-title">Set up controller</strong>
+        <p class="hint">
+          Writes the standard LED settings (setup guide steps 13–23) to the controller, replacing its
+          current LED settings. The controller must already be on the home Wi-Fi.
+        </p>
+        <div>
+          <span class="label">LED outputs</span>
+          <ul id="setup-outputs" class="plain-list"></ul>
+        </div>
+        <div>
+          <span class="label">Settings for every output</span>
+          <ul id="setup-summary" class="plain-list"></ul>
+        </div>
+        <label>
+          Presets file <span class="hint-inline">(optional, e.g. ZeusPresets.json: steps 28–31)</span>
+          <input type="file" id="setup-presets" accept=".json,application/json">
+        </label>
+        <p class="message" id="setup-error" role="alert"></p>
+        <div id="setup-result" class="result" hidden></div>
+        <div class="row">
+          <button type="submit" class="primary inline" id="setup-submit">Write settings to controller</button>
+          <button type="button" id="setup-cancel" class="secondary inline">Close</button>
+        </div>
+      </form>
     </section>
   </main>
 

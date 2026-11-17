@@ -10,7 +10,7 @@ const PUBLIC = path.join(__dirname, '..', 'public');
 const USERNAME_RE = /^[A-Za-z0-9_.-]{3,32}$/;
 const MIN_PASSWORD = 8;
 
-app.use(express.json());
+app.use(express.json({ limit: '2mb' })); // presets files can be large
 app.use(auth.loadUser);
 
 // ---- Pages ----

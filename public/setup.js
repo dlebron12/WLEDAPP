@@ -18,13 +18,24 @@
     $('controller-empty').hidden = devices.length > 0;
     for (const d of devices) {
       const li = document.createElement('li');
-      li.innerHTML = `<div class="meta"><strong></strong><span></span><span></span></div>
-        <div class="row"><button type="button" class="secondary inline" data-act="edit">Edit</button>
+      li.innerHTML = `<div class="meta"><strong></strong><span></span><span></span><span class="setup-state"></span></div>
+        <div class="row"><button type="button" class="primary inline" data-act="setup">Set up controller</button>
+        <button type="button" class="secondary inline" data-act="edit">Edit</button>
         <button type="button" class="secondary inline" data-act="remove">Remove</button></div>`;
-      const [name, addr, strips] = li.querySelector('.meta').children;
+      const [name, addr, strips, state] = li.querySelector('.meta').children;
       name.textContent = d.name;
       addr.textContent = `${d.host}${d.mdns ? ` · ${d.mdns}.local` : ''}`;
       strips.textContent = stripSummary(d);
+      if (d.setupCurrent) {
+        state.textContent = `✓ Set up ${d.configuredAt.slice(0, 10)}`;
+        state.classList.add('ok');
+      } else {
+        state.textContent = d.configuredAt
+          ? 'Strips changed since the last setup: set it up again'
+          : 'Not set up by this app yet';
+        state.classList.add('todo');
+      }
+      li.querySelector('[data-act=setup]').addEventListener('click', () => openSetup(d));
       li.querySelector('[data-act=edit]').addEventListener('click', () => openForm({ device: d }));
       li.querySelector('[data-act=remove]').addEventListener('click', () => removeDevice(d));
       list.appendChild(li);
@@ -36,6 +47,7 @@
     try {
       await api(`/api/devices/${d.id}`, { method: 'DELETE' });
       if (editingId === d.id) form.hidden = true;
+      if (setupId === d.id) $('setup-panel').hidden = true;
       await App.reloadDevices();
       setupStatus(`Removed "${d.name}".`);
     } catch (e) { setupStatus(e.message, 'error'); }
@@ -139,6 +151,7 @@
     setStripInputs(lengths);
     formError('');
     setupStatus('');
+    $('setup-panel').hidden = true;
     form.hidden = false;
     form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     form.name.focus({ preventScroll: true });
@@ -202,6 +215,105 @@
       setupStatus(editingId ? `Saved "${d.name}".` : `Added "${d.name}". Select it on the Controls tab to change its lights.`, 'ok');
     } catch (err) { formError(err.message); }
   });
+
+  // ---------- Set up controller ----------
+  const panel = $('setup-panel');
+  let setupId = null;
+  let profile = null; // { pins, summary } from the server
+
+  async function openSetup(d) {
+    if (!profile) {
+      try { profile = await api('/api/devices/setup-profile'); } catch (e) { setupStatus(e.message, 'error'); return; }
+    }
+    setupId = d.id;
+    form.hidden = true;
+    setupStatus('');
+    $('setup-title').textContent = `Set up ${d.name}`;
+    $('setup-error').textContent = '';
+    $('setup-result').hidden = true;
+    $('setup-presets').value = '';
+
+    const outputs = $('setup-outputs');
+    outputs.innerHTML = '';
+    d.stripLengths.forEach((len, i) => {
+      const li = document.createElement('li');
+      li.textContent = i < profile.pins.length
+        ? `Output ${i + 1} (Data ${i + 1}): GPIO ${profile.pins[i]} · ${fmt(len)} lights`
+        : `Strip ${i + 1}: no data pin available`;
+      outputs.appendChild(li);
+    });
+    const summary = $('setup-summary');
+    summary.innerHTML = '';
+    for (const line of profile.summary) {
+      const li = document.createElement('li');
+      li.textContent = line;
+      summary.appendChild(li);
+    }
+    const tooMany = d.stripCount > profile.pins.length;
+    $('setup-submit').disabled = tooMany;
+    if (tooMany) {
+      $('setup-error').textContent = `The setup has ${profile.pins.length} data pins, one per strip. ` +
+        `This controller has ${d.stripCount} strips: reduce them to ${profile.pins.length} with Edit.`;
+    }
+    panel.hidden = false;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  $('setup-cancel').addEventListener('click', () => { panel.hidden = true; });
+
+  panel.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const d = App.devices.find((x) => x.id === setupId);
+    if (!d) return;
+    $('setup-error').textContent = '';
+    $('setup-result').hidden = true;
+
+    const file = $('setup-presets').files[0];
+    let presets;
+    if (file) {
+      if (file.size > 1.5 * 1024 * 1024) { $('setup-error').textContent = 'The presets file is too large.'; return; }
+      presets = await file.text();
+      try { JSON.parse(presets); } catch { $('setup-error').textContent = `"${file.name}" is not a valid JSON file.`; return; }
+    }
+    const what = `${d.stripCount === 1 ? 'its LED output' : `its ${d.stripCount} LED outputs`}${file ? ` and upload "${file.name}"` : ''}`;
+    if (!confirm(`Replace ${d.name}'s LED settings with ${what}?`)) return;
+
+    const btn = $('setup-submit');
+    btn.disabled = true;
+    btn.textContent = 'Writing settings…';
+    try {
+      const r = await api(`/api/devices/${d.id}/setup`, { method: 'POST', body: presets ? { presets } : {} });
+      showResult(r, file);
+      await App.reloadDevices();
+    } catch (err) {
+      $('setup-error').textContent = err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Write settings to controller';
+    }
+  });
+
+  function showResult(r, file) {
+    const box = $('setup-result');
+    box.innerHTML = '';
+    box.className = `result ${r.verified ? 'ok' : 'warn'}`;
+    const head = document.createElement('div');
+    head.textContent = r.verified
+      ? `Done. ${plural(r.outputs.length, 'output')} written and checked (${fmt(r.totalLights)} lights).`
+      : 'The settings were sent, but the controller reports something different:';
+    box.appendChild(head);
+    if (!r.verified) {
+      const ul = document.createElement('ul');
+      for (const p of r.problems) { const li = document.createElement('li'); li.textContent = p; ul.appendChild(li); }
+      box.appendChild(ul);
+    }
+    if (r.presetsUploaded) {
+      const p = document.createElement('div');
+      p.textContent = `Presets "${file.name}" uploaded.`;
+      box.appendChild(p);
+    }
+    box.hidden = false;
+  }
 
   App.onDevicesChanged((devices) => {
     renderControllers(devices);

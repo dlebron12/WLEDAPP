@@ -3,6 +3,7 @@ const express = require('express');
 const q = require('./db');
 const wled = require('./wled');
 const discovery = require('./discovery');
+const controllerSetup = require('./controllerSetup');
 
 const router = express.Router();
 
@@ -19,6 +20,11 @@ router.get('/discover', async (req, res) => {
     const existing = mine.find((m) => (d.mac && m.mac === d.mac) || m.host === d.host);
     return { ...d, addedAs: existing ? { id: existing.id, name: existing.name } : null };
   }));
+});
+
+// What "Set up controller" writes, for the Setup tab to show before writing.
+router.get('/setup-profile', (req, res) => {
+  res.json({ pins: controllerSetup.PROFILE.pins, summary: controllerSetup.PROFILE_SUMMARY });
 });
 
 // Loads the device for :id if it belongs to the signed-in user.
@@ -143,6 +149,31 @@ router.post('/:id/strips/:strip/apply', async (req, res) => {
     } catch (e2) {
       return res.status(502).json({ error: `Found ${device.name} at its new address ${found.host}, but couldn't apply: ${e2.message}.` });
     }
+  }
+});
+
+// Writes the standard LED setup (setup guide steps 13–23) to the controller, using this
+// device's strip lengths, and optionally uploads a presets file (steps 28–31).
+router.post('/:id/setup', async (req, res) => {
+  const device = req.device;
+  let presetsText = null;
+  if (req.body?.presets != null) {
+    presetsText = String(req.body.presets);
+    try {
+      const parsed = JSON.parse(presetsText);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error();
+    } catch {
+      return res.status(400).json({ error: 'The presets file is not valid WLED presets JSON.' });
+    }
+  }
+  try {
+    const result = await controllerSetup.setupController(device, { presetsText });
+    if (result.verified) q.markConfigured.run(JSON.stringify(device.stripLengths), device.id);
+    res.json({ ...result, device: q.findDevice(device.id, req.user.id) });
+  } catch (e) {
+    const where = e instanceof wled.DeviceUnreachableError
+      ? ' Check that it is powered on and that this computer is on the same Wi-Fi.' : '';
+    res.status(502).json({ error: `Couldn't set up ${device.name} (${device.host}): ${e.message.replace(/\.$/, '')}.${where}` });
   }
 });
 
