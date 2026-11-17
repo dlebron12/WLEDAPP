@@ -201,7 +201,6 @@ button.link {
 @media (prefers-color-scheme: dark) { .status.warn { color: #ffb84d; } }
 
 /* Live preview */
-.preview-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.85rem; color: var(--muted); }
 .preview {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -211,6 +210,9 @@ button.link {
   border-radius: 12px;
 }
 .bulb {
+  position: relative;
+  display: grid;
+  place-items: center;
   aspect-ratio: 1;
   width: 100%;
   max-width: 56px;
@@ -218,10 +220,42 @@ button.link {
   border-radius: 50%;
   border: none;
   padding: 0;
-  background: #262a33;
-  transition: box-shadow 0.08s linear;
+  background: none;
   cursor: default;
 }
+/* The light itself (dims and glows); the number on top stays fully visible. */
+.bulb .glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #262a33;
+  transition: box-shadow 0.08s linear;
+}
+.bulb .num {
+  position: relative;
+  color: #fff;
+  font-weight: 700;
+  font-size: clamp(11px, 3.2vw, 15px);
+  line-height: 1;
+  text-shadow: 0 0 3px #000, 0 0 2px #000, 0 1px 1px #000;
+  pointer-events: none;
+}
+
+/* Individual Light: instruction above the preview */
+.paint-instruction {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  margin: 2px 0 4px;
+  padding: 12px 14px;
+  text-align: center;
+  border: 1px dashed var(--accent);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.paint-instruction[hidden] { display: none; }
+.paint-instruction strong { font-size: 1rem; color: var(--text); }
+.paint-instruction .link { font-size: 0.88rem; }
 .preview.paintable .bulb { cursor: pointer; }
 .preview.paintable .bulb:hover { outline: 2px solid #fff6; outline-offset: 3px; }
 

@@ -204,13 +204,14 @@ for (let i = 0; i < GRID; i++) {
   b.type = 'button';
   b.className = 'bulb';
   b.setAttribute('aria-label', `Light ${i + 1}`);
+  b.innerHTML = `<span class="glow"></span><span class="num">${i + 1}</span>`;
   b.addEventListener('click', () => {
     if (!settings || settings.effect !== 'individual') return;
     settings.pixels[i] = settings.color;
     updateStatus();
   });
   els.preview.appendChild(b);
-  bulbs.push(b);
+  bulbs.push(b.querySelector('.glow')); // paintBulb lights the glow; the number stays readable
 }
 
 // WLED's "Colorful" palette: red, amber, green, blue marching along the strip.
