@@ -44,7 +44,10 @@ async function probeDetailed(host, timeout = PROBE_TIMEOUT_MS) {
   } catch (e) {
     return { reason: failureReason(e, timeout) };
   }
-  if (!looksLikeWled(info)) return { reason: 'it answered, but not like a WLED controller' };
+  const brand = info && typeof info === 'object' && info.brand != null ? String(info.brand) : null;
+  if (!looksLikeWled(info)) {
+    return { reason: `it answered, but not like a WLED controller (brand label: ${brand ?? 'none'})`, brand };
+  }
 
   // The config has the length of each LED output (data line) and the mDNS name.
   let cfg = {};
@@ -54,6 +57,7 @@ async function probeDetailed(host, timeout = PROBE_TIMEOUT_MS) {
   return {
     device: {
       name: info.name || 'WLED',
+      brand, // the brand label the firmware reports in /json/info, e.g. "WLED"
       host,
       mac: normalizeMac(info.mac),
       mdns: cfg?.id?.mdns || null,
@@ -195,7 +199,11 @@ async function discover({ scan = true } = {}) {
     `${heard.length ? ` (${heard.map((h) => `${h.name} @ ${h.host}`).join(', ')})` : ''} · ` +
     `scanned ${searched.addressesScanned} addresses in ${searched.networks.join(', ') || 'no networks'} · ` +
     `this computer: ${searched.computerAddresses.join(', ') || 'no network'} · ${searched.seconds}s`);
-  for (const n of stillMissing) console.log(`[discovery] heard ${n.name} @ ${n.host} but it didn't answer: ${n.reason}`);
+  for (const c of controllers) {
+    console.log(`[discovery] found ${c.name} @ ${c.host} · brand label: ${c.brand ?? 'none'} · ` +
+      `version: ${c.version ?? '?'} · MAC: ${c.mac ?? '?'} · LED outputs: ${c.outputs.join(' + ') || '?'}`);
+  }
+  for (const n of stillMissing) console.log(`[discovery] heard ${n.name} @ ${n.host} but couldn't read it: ${n.reason}`);
   return { controllers, notResponding: stillMissing, searched };
 }
 

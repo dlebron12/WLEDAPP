@@ -74,7 +74,7 @@
         $('find-status').textContent = `Found ${plural(lastFound.length, 'controller')}.`;
       } else if (lastNotResponding.length) {
         $('find-status').textContent = `${plural(lastNotResponding.length, 'controller')} announced ` +
-          `${lastNotResponding.length === 1 ? 'itself' : 'themselves'} on your network but didn't answer the app:`;
+          `${lastNotResponding.length === 1 ? 'itself' : 'themselves'} on your network, but the app couldn't read its details:`;
       } else {
         $('find-status').textContent =
           `No controllers found. The app listened for WLED announcements (${searched.mdnsAnswers} answered) and ${where}.`;
@@ -142,7 +142,7 @@
       const [name, addr, why] = li.querySelector('.meta').children;
       name.textContent = n.name;
       addr.textContent = `IP address: ${n.host}${n.mdns ? ` · ${n.mdns}.local` : ''}`;
-      why.textContent = `Didn't answer: ${n.reason}. You can still add it with this address.`;
+      why.textContent = `Couldn't read it: ${n.reason}. You can still add it with this address.`;
       const added = App.devices.find((d) => (n.mac && d.mac === n.mac) || d.host === n.host);
       if (added) li.appendChild(note(`Added as "${added.name}"`));
       else {
