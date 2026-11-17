@@ -82,4 +82,10 @@ app.use('/api/devices', require('./devices'));
 // Clean up expired sessions hourly.
 setInterval(() => q.deleteExpiredSessions.run(Date.now()), 60 * 60 * 1000).unref();
 
-app.listen(PORT, () => console.log(`WLED App running at http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Light Ops app running at http://localhost:${PORT}`);
+  // Other devices on the same Wi-Fi (e.g. a phone) can open it at this computer's local address.
+  const lan = Object.values(require('os').networkInterfaces()).flat()
+    .filter((a) => a && a.family === 'IPv4' && !a.internal && /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(a.address));
+  for (const a of lan) console.log(`On your phone (same Wi-Fi): http://${a.address}:${PORT}`);
+});

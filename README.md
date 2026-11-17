@@ -78,6 +78,17 @@ npm start
 ```
 Then open http://localhost:3000.
 
+## Use it from a phone
+The app runs on the computer; a phone on the same Wi-Fi can open it in its browser.
+1. Start the app on the computer (`npm start`). It prints a line like
+   `On your phone (same Wi-Fi): http://192.168.1.23:3000`.
+2. Open that address in the phone's browser (Safari: Share → Add to Home Screen for an app icon).
+3. If macOS asks whether to allow incoming connections for "node", choose **Allow**.
+
+The computer must stay on and running the app, on the same Wi-Fi as the controllers. While the phone is
+joined to a controller's own WLED network (Wi-Fi setup, steps 1–8) it can't reach the app; switch the
+phone back to the home Wi-Fi afterwards.
+
 ## API
 | Method | Path          | Body                       | Purpose                     |
 |--------|---------------|----------------------------|-----------------------------|
