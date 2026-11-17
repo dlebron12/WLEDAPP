@@ -118,6 +118,14 @@ function buildRequests(device, strips, { removeExtraSegments = false, maxSegment
   return requests;
 }
 
+// Is this /json/info reply from WLED? Official builds say brand "WLED"; installer or vendor builds
+// of WLED may use another brand name, so also accept the shape of WLED's info (version + LEDs).
+function looksLikeWled(info) {
+  if (!info || typeof info !== 'object') return false;
+  if (info.brand === 'WLED') return true;
+  return typeof info.ver === 'string' && info.leds && typeof info.leds === 'object' && 'count' in info.leds;
+}
+
 // Only local-network addresses: an IPv4 address in a private/loopback range,
 // a single-word hostname, or a name ending in .local — each with an optional port.
 function isLocalHost(host) {
@@ -177,5 +185,5 @@ async function applyToDevice(device, strips, options = {}) {
 
 module.exports = {
   EFFECTS, DEFAULT_SETTINGS, MAX_STRIPS, MAX_STRIP_LENGTH, DeviceUnreachableError, DeviceError,
-  validateSettings, stripOffsets, pixelRanges, buildRequests, isLocalHost, applyToDevice, request,
+  validateSettings, stripOffsets, pixelRanges, buildRequests, isLocalHost, applyToDevice, request, looksLikeWled,
 };

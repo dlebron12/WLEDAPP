@@ -14,13 +14,14 @@ router.use((req, res, next) => {
 
 // Finds WLED controllers on the local network. Marks ones this user already added.
 router.get('/discover', async (req, res) => {
-  const { controllers, searched } = await discovery.discover({ scan: req.query.scan !== '0' });
+  const { controllers, notResponding, searched } = await discovery.discover({ scan: req.query.scan !== '0' });
   const mine = q.listDevices(req.user.id);
   res.json({
     controllers: controllers.map((d) => {
       const existing = mine.find((m) => (d.mac && m.mac === d.mac) || m.host === d.host);
       return { ...d, addedAs: existing ? { id: existing.id, name: existing.name } : null };
     }),
+    notResponding,
     searched,
   });
 });

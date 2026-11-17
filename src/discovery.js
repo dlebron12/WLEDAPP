@@ -8,9 +8,11 @@
 // Both only work when this app runs on a computer on the same network as the controllers.
 const os = require('os');
 const { Bonjour } = require('bonjour-service');
+const { looksLikeWled } = require('./wled');
 
 const SCAN_PORT = Number(process.env.DISCOVERY_SCAN_PORT || 80); // tests use another port
-const PROBE_TIMEOUT_MS = 1500;
+const PROBE_TIMEOUT_MS = 1500;   // per address during the scan (most addresses never answer)
+const ANNOUNCED_TIMEOUT_MS = 5000; // for controllers that announced themselves: they can be slow
 const SCAN_CONCURRENCY = 128;
 
 const normalizeMac = (mac) => (typeof mac === 'string' ? mac.toLowerCase().replace(/[^0-9a-f]/g, '') : '') || null;
@@ -22,47 +24,74 @@ async function getJson(url, timeout = PROBE_TIMEOUT_MS) {
   return res.json();
 }
 
-// Asks one address whether it is a WLED controller. Returns its details, or null.
-async function probe(host, timeout = PROBE_TIMEOUT_MS) {
+// Why a request failed, in words the app can show.
+function failureReason(e, timeout) {
+  if (e.name === 'TimeoutError' || e.name === 'AbortError') return `no reply within ${timeout / 1000} seconds`;
+  if (/^HTTP /.test(e.message)) return `it answered with an error (${e.message})`;
+  const code = e.cause?.code || e.code;
+  if (code === 'ECONNREFUSED') return 'it refused the connection';
+  if (code === 'EHOSTUNREACH' || code === 'ENETUNREACH') return 'this computer has no route to it (different network?)';
+  if (e instanceof SyntaxError) return 'it answered, but not with WLED data';
+  return code ? `connection failed (${code})` : 'connection failed';
+}
+
+// Asks one address whether it is a WLED controller.
+// Returns { device } with its details, or { reason } saying why not.
+async function probeDetailed(host, timeout = PROBE_TIMEOUT_MS) {
   let info;
   try {
     info = await getJson(`http://${host}/json/info`, timeout);
-  } catch {
-    return null;
+  } catch (e) {
+    return { reason: failureReason(e, timeout) };
   }
-  if (!info || info.brand !== 'WLED') return null;
+  if (!looksLikeWled(info)) return { reason: 'it answered, but not like a WLED controller' };
 
   // The config has the length of each LED output (data line) and the mDNS name.
   let cfg = {};
-  try { cfg = await getJson(`http://${host}/json/cfg`, 3000); } catch { /* older firmware: skip */ }
+  try { cfg = await getJson(`http://${host}/json/cfg`, Math.max(timeout, 3000)); } catch { /* older firmware: skip */ }
   const outputs = (cfg?.hw?.led?.ins || []).map((o) => Number(o.len)).filter((n) => Number.isInteger(n) && n > 0);
 
   return {
-    name: info.name || 'WLED',
-    host,
-    mac: normalizeMac(info.mac),
-    mdns: cfg?.id?.mdns || null,
-    version: info.ver || null,
-    ledCount: info.leds?.count ?? null,
-    maxSegments: info.leds?.maxseg ?? null,
-    outputs, // e.g. [300, 300, 250, 120]
+    device: {
+      name: info.name || 'WLED',
+      host,
+      mac: normalizeMac(info.mac),
+      mdns: cfg?.id?.mdns || null,
+      version: info.ver || null,
+      ledCount: info.leds?.count ?? null,
+      maxSegments: info.leds?.maxseg ?? null,
+      outputs, // e.g. [300, 300, 250, 120]
+    },
   };
 }
 
-// Listens for "_wled._tcp" announcements for `ms` milliseconds. Returns hosts like "192.168.1.47".
+// Returns the controller's details, or null.
+async function probe(host, timeout = PROBE_TIMEOUT_MS) {
+  return (await probeDetailed(host, timeout)).device || null;
+}
+
+// Listens for "_wled._tcp" announcements for `ms` milliseconds.
+// Returns [{ host: "192.168.1.47", name, mdns, mac }] (one per controller heard).
 function browseMdns(ms = 4000) {
   return new Promise((resolve) => {
     let bonjour;
-    const hosts = new Set();
+    const heard = new Map();
     try {
       bonjour = new Bonjour();
       const browser = bonjour.find({ type: 'wled' }, (svc) => {
         const ip = (svc.addresses || []).find((a) => /^\d+\.\d+\.\d+\.\d+$/.test(a));
-        if (ip) hosts.add(hostFor(ip, svc.port));
+        if (!ip) return;
+        const host = hostFor(ip, svc.port);
+        heard.set(host, {
+          host,
+          name: svc.name || 'WLED',
+          mdns: typeof svc.host === 'string' ? svc.host.replace(/\.local\.?$/i, '') : null,
+          mac: normalizeMac(svc.txt?.mac),
+        });
       });
       setTimeout(() => {
         try { browser.stop(); bonjour.destroy(); } catch { /* ignore */ }
-        resolve([...hosts]);
+        resolve([...heard.values()]);
       }, ms);
     } catch {
       try { bonjour?.destroy(); } catch { /* ignore */ }
@@ -127,12 +156,21 @@ async function scanNetworks(networks) {
 }
 
 // Finds controllers with mDNS, then (if asked) a scan. One entry per controller (by MAC).
-// Returns { controllers, searched } where `searched` says what was tried, so the app can
-// explain an empty result.
+// Returns { controllers, notResponding, searched }:
+//  - notResponding: controllers that announced themselves but didn't answer, with the reason,
+//    so the app can offer to add them by address anyway;
+//  - searched: what was tried, so the app can explain an empty result.
 async function discover({ scan = true } = {}) {
   const started = Date.now();
-  const mdnsHosts = await browseMdns();
-  const results = (await Promise.all(mdnsHosts.map((h) => probe(h)))).filter(Boolean);
+  const heard = await browseMdns();
+  const results = [];
+  const notResponding = [];
+  await Promise.all(heard.map(async (h) => {
+    let r = await probeDetailed(h.host, ANNOUNCED_TIMEOUT_MS);
+    if (!r.device && /no reply/.test(r.reason)) r = await probeDetailed(h.host, ANNOUNCED_TIMEOUT_MS); // one retry
+    if (r.device) results.push({ ...r.device, mac: r.device.mac || h.mac, mdns: r.device.mdns || h.mdns });
+    else notResponding.push({ ...h, reason: r.reason });
+  }));
   const networks = scan ? localNetworks() : [];
   if (scan) results.push(...(await scanNetworks(networks)));
 
@@ -142,18 +180,23 @@ async function discover({ scan = true } = {}) {
     if (!byKey.has(key)) byKey.set(key, r);
   }
   const controllers = [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name));
+  // The scan may still have reached one that didn't answer the first time.
+  const stillMissing = notResponding.filter((n) => !controllers.some((c) => c.host === n.host || (n.mac && c.mac === n.mac)));
+
   const searched = {
-    mdnsAnswers: mdnsHosts.length,
+    mdnsAnswers: heard.length,
     networks: networks.map((n) => n.cidr),
     addressesScanned: networks.reduce((sum, n) => sum + n.hosts.length, 0),
     computerAddresses: Object.values(os.networkInterfaces()).flat()
       .filter((a) => a && (a.family === 'IPv4' || a.family === 4) && !a.internal).map((a) => a.address),
     seconds: Math.round((Date.now() - started) / 100) / 10,
   };
-  console.log(`[discovery] ${controllers.length} found · mDNS answers: ${searched.mdnsAnswers} · ` +
+  console.log(`[discovery] ${controllers.length} found · mDNS answers: ${searched.mdnsAnswers}` +
+    `${heard.length ? ` (${heard.map((h) => `${h.name} @ ${h.host}`).join(', ')})` : ''} · ` +
     `scanned ${searched.addressesScanned} addresses in ${searched.networks.join(', ') || 'no networks'} · ` +
     `this computer: ${searched.computerAddresses.join(', ') || 'no network'} · ${searched.seconds}s`);
-  return { controllers, searched };
+  for (const n of stillMissing) console.log(`[discovery] heard ${n.name} @ ${n.host} but it didn't answer: ${n.reason}`);
+  return { controllers, notResponding: stillMissing, searched };
 }
 
 // Finds a controller by MAC address (used when its IP address has changed).

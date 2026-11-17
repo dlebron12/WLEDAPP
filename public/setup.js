@@ -4,6 +4,7 @@
   let editingId = null;
   let discovered = { mdns: null, mac: null }; // from "Find controllers", sent with the form
   let lastFound = [];                          // last discovery results, re-rendered when devices change
+  let lastNotResponding = [];                  // announced themselves but didn't answer
 
   const formError = (text) => { $('device-form-error').textContent = text || ''; };
   const setupStatus = (text, kind = '') => {
@@ -63,15 +64,22 @@
     $('find-help').hidden = true;
     $('find-status').textContent = 'Searching your network… this can take up to 30 seconds.';
     try {
-      const { controllers, searched } = await api('/api/devices/discover');
+      const { controllers, notResponding, searched } = await api('/api/devices/discover');
       lastFound = controllers;
+      lastNotResponding = notResponding || [];
       const where = searched.networks.length
         ? `checked ${fmt(searched.addressesScanned)} addresses on ${searched.networks.join(', ')}`
         : 'could not find a home network on the computer running the app';
-      $('find-status').textContent = lastFound.length
-        ? `Found ${plural(lastFound.length, 'controller')}.`
-        : `No controllers found. The app listened for WLED announcements (${searched.mdnsAnswers} answered) and ${where}.`;
-      if (!lastFound.length) showHelp(searched);
+      if (lastFound.length) {
+        $('find-status').textContent = `Found ${plural(lastFound.length, 'controller')}.`;
+      } else if (lastNotResponding.length) {
+        $('find-status').textContent = `${plural(lastNotResponding.length, 'controller')} announced ` +
+          `${lastNotResponding.length === 1 ? 'itself' : 'themselves'} on your network but didn't answer the app:`;
+      } else {
+        $('find-status').textContent =
+          `No controllers found. The app listened for WLED announcements (${searched.mdnsAnswers} answered) and ${where}.`;
+        showHelp(searched);
+      }
       renderFound();
     } catch (e) {
       $('find-status').textContent = e.message;
@@ -127,6 +135,23 @@
       }
       results.appendChild(li);
     }
+    for (const n of lastNotResponding) {
+      const li = document.createElement('li');
+      li.className = 'not-responding';
+      li.innerHTML = '<div class="meta"><strong></strong><span></span><span></span></div>';
+      const [name, addr, why] = li.querySelector('.meta').children;
+      name.textContent = n.name;
+      addr.textContent = `${n.host}${n.mdns ? ` · ${n.mdns}.local` : ''}`;
+      why.textContent = `Didn't answer: ${n.reason}. You can still add it with this address.`;
+      const added = App.devices.find((d) => (n.mac && d.mac === n.mac) || d.host === n.host);
+      if (added) li.appendChild(note(`Added as "${added.name}"`));
+      else {
+        li.appendChild(button('Add with this address', 'secondary', () => openForm({
+          found: { name: n.name, host: n.host, mdns: n.mdns, mac: n.mac, outputs: [], ledCount: null },
+        })));
+      }
+      results.appendChild(li);
+    }
   }
 
   async function updateAddress(device, found) {
@@ -162,9 +187,10 @@
     discovered = found ? { mdns: found.mdns, mac: found.mac } : { mdns: null, mac: null };
     $('device-form-title').textContent = device ? `Edit ${device.name}` : 'Add controller';
     $('device-form-submit').textContent = device ? 'Save changes' : 'Add controller';
-    $('device-form-source').textContent = found
-      ? `Filled in from "${found.name}". Check the strip lengths, then add it.`
-      : '';
+    $('device-form-source').textContent = !found ? ''
+      : found.outputs.length || found.ledCount
+        ? `Filled in from "${found.name}". Check the strip lengths, then add it.`
+        : `Filled in from "${found.name}". Enter the number of lights on each strip, then add it.`;
     form.name.value = device ? device.name : found ? found.name.slice(0, 40) : '';
     form.host.value = device ? device.host : found ? found.host : '';
     const lengths = device ? device.stripLengths
@@ -339,6 +365,6 @@
 
   App.onDevicesChanged((devices) => {
     renderControllers(devices);
-    if (lastFound.length) renderFound();
+    if (lastFound.length || lastNotResponding.length) renderFound();
   });
 })();

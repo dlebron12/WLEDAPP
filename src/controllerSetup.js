@@ -92,7 +92,7 @@ async function setupController(device, { presetsText = null } = {}) {
   const config = buildLedConfig(device.stripLengths);
 
   const info = await wled.request(device.host, '/json/info');
-  if (info?.brand !== 'WLED') throw new wled.DeviceError('the device at this address is not a WLED controller');
+  if (!wled.looksLikeWled(info)) throw new wled.DeviceError('the device at this address is not a WLED controller');
 
   try {
     await wled.request(device.host, '/json/cfg', config);
