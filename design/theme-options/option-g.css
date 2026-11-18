@@ -1,0 +1,16 @@
+/* FALLLUXE · Option G: Maroon & Orange */
+:root { --bg: #EFE9E1; --card: #FEFBF3; --text: #4E0401; --muted: #6E5B52; --border: #DDD2C6;
+  --accent: #4E0401; --accent-text: #FEFBF3; --panel: #F7F2EA; --error: #b3261e; --ok: #3f6b48; }
+.tab.active { border-bottom-color: #E88C2B; border-bottom-width: 3px; }
+.segmented button[aria-pressed="true"] { background: #E88C2B; color: #4E0401; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #4E0401; --card: #5E120D; --text: #FEFBF3; --muted: #E3D3C4; --border: #7A2A22;
+    --accent: #E88C2B; --accent-text: #4E0401; --panel: #4E0401; --error: #ffb4a8; --ok: #a8d5b0; }
+  .topbar { background: #3F0301; }
+  button.link { color: #F5B977; }
+  input, select { background: #3F0301; }
+}
+
+.preview { background: #2a0d0a; }
+.bulb .glow { background: #4a2620; }
+

@@ -1,0 +1,20 @@
+/* FALLLUXE · Option H: Harvest */
+:root { --bg: #FEFBF3; --card: #FFFFFF; --text: #4E0401; --muted: #6E5B52; --border: #EADFD2;
+  --accent: #E88C2B; --accent-text: #4E0401; --panel: #FBF6EC; --error: #b3261e; --ok: #3f6b48; }
+button.link { color: #4E0401; }                  /* orange text is too faint on white: links stay maroon */
+.topbar { background: #E88C2B; border-bottom-color: #E88C2B; }
+.topbar .tab { color: #6A2A10; }
+.topbar .tab.active { color: #4E0401; border-bottom-color: #4E0401; border-bottom-width: 3px; }
+.topbar .account, .topbar .account .link { color: #4E0401; }
+.tab.active { border-bottom-color: #E88C2B; border-bottom-width: 3px; }
+input, select { background: #FEFBF3; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #241815; --card: #31211C; --text: #FEFBF3; --muted: #D6C8BA; --border: #4A342C;
+    --accent: #E88C2B; --accent-text: #2A0E05; --panel: #241815; --error: #ffb4a8; --ok: #a8d5b0; }
+  button.link { color: #F5B977; }
+  input, select { background: #1C1310; }
+}
+
+.preview { background: #2a0d0a; }
+.bulb .glow { background: #4a2620; }
+

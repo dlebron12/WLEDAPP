@@ -1,0 +1,22 @@
+/* FALLLUXE · Option I: Maroon Crown */
+:root { --bg: #EFE9E1; --card: #FEFBF3; --text: #4E0401; --muted: #6E5B52; --border: #DDD2C6;
+  --accent: #AC9C8D; --accent-text: #4E0401; --panel: #F7F2EA; --error: #b3261e; --ok: #3f6b48; }
+button.link { color: #4E0401; }
+.topbar { background: #4E0401; border-bottom: 3px solid #E88C2B; }
+.topbar .tab { color: #D9C2B4; }
+.topbar .tab.active { color: #FEFBF3; border-bottom-color: #E88C2B; border-bottom-width: 3px; }
+.topbar .account, .topbar .account .link { color: #FEFBF3; }
+.card { border-top: 4px solid #E88C2B; }
+.tab.active { border-bottom-color: #4E0401; border-bottom-width: 3px; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #241815; --card: #31211C; --text: #FEFBF3; --muted: #D6C8BA; --border: #5A463D;
+    --accent: #AC9C8D; --accent-text: #2A0E05; --panel: #241815; --error: #ffb4a8; --ok: #a8d5b0; }
+  .card { border: 1px solid #5A463D; border-top: 4px solid #E88C2B; }
+  .tab.active { border-bottom-color: #E88C2B; }
+  button.link { color: #F5B977; }
+  input, select { background: #1C1310; }
+}
+
+.preview { background: #2a0d0a; }
+.bulb .glow { background: #4a2620; }
+

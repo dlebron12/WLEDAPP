@@ -1,6 +1,6 @@
 # Theme options (not decided yet)
 
-Six ways to restyle the app, in two palette families. **None of these is applied to the app.**
+Nine ways to restyle the app, in three palette families. **None of these is applied to the app.**
 They are kept here until a permanent choice is made.
 
 Every option has a **light** and a **dark** version; the app follows the phone/computer's light or
@@ -56,6 +56,30 @@ Each screenshot shows, at phone size: sign-in page (light), Controls tab (light)
 ![LUXE Option D](option-d.png)
 ![LUXE Option E](option-e.png)
 ![LUXE Option F](option-f.png)
+
+---
+
+## FALLLUXE (Options G, H, I)
+
+| Color | Hex |
+|---|---|
+| Orange Grove | `#E88C2B` |
+| Calming White | `#FEFBF3` |
+| Dark Maroon | `#4E0401` |
+| Cream (from LUXE) | `#EFE9E1` |
+| Taupe (from LUXE) | `#AC9C8D` |
+
+| | G: Maroon & Orange | H: Harvest | I: Maroon Crown |
+|---|---|---|---|
+| Idea | Maroon for actions, orange highlights | Orange-forward | Maroon header bar, soft taupe actions |
+| Light | Cream background, calming-white cards, maroon buttons and text, orange tab underline | Calming-white background, orange header and buttons (maroon text), maroon links | Cream background, maroon header with orange line, orange strip on cards, taupe buttons |
+| Dark | Maroon background, orange buttons | Deep warm brown, orange header and buttons | Deep warm brown, maroon header, taupe buttons |
+| Note | | The gold logo has weak contrast on the orange header | |
+| Files | [option-g.css](option-g.css) · [option-g.png](option-g.png) | [option-h.css](option-h.css) · [option-h.png](option-h.png) | [option-i.css](option-i.css) · [option-i.png](option-i.png) |
+
+![FALLLUXE Option G](option-g.png)
+![FALLLUXE Option H](option-h.png)
+![FALLLUXE Option I](option-i.png)
 
 ---
 
