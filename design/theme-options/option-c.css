@@ -1,0 +1,22 @@
+/* Option C: Gold Statement */
+:root { --bg: #fbf7f0; --card: #ffffff; --text: #1a1a2e; --muted: #5d5a66; --border: #ead9bd;
+  --accent: #efc07b; --accent-text: #1a1a2e; --panel: #fdf9f2; --error: #b3261e; }
+button.link { color: #0f3460; }                  /* gold text is too faint on white: links stay navy */
+.topbar { background: #1a1a2e; border-bottom: 2px solid #efc07b; }
+.topbar .tab { color: #b9c0d4; }
+.topbar .tab.active { color: #efc07b; border-bottom-color: #efc07b; border-bottom-width: 3px; }
+.topbar .account, .topbar .account .link { color: #e9e4d8; }
+.card { border-top: 4px solid #efc07b; }
+.tab.active { border-bottom-color: #efc07b; border-bottom-width: 3px; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #1a1a2e; --card: #16213e; --text: #ffffff; --muted: #cfc8b8; --border: rgba(239, 192, 123, 0.35);
+    --accent: #efc07b; --accent-text: #1a1a2e; --panel: #1a1a2e; --error: #ff8a80; }
+  button.link { color: #efc07b; }
+  .card { border: 1px solid rgba(239, 192, 123, 0.45); border-top: 4px solid #efc07b; }
+  .topbar { background: #16213e; }
+  input, select { background: #1a1a2e; }
+}
+
+.preview { background: #1a1a2e; }
+.bulb .glow { background: #0f3460; }
+

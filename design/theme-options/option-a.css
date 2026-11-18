@@ -1,0 +1,14 @@
+/* Option A: Midnight & Gold */
+:root { --bg: #f6f4ef; --card: #ffffff; --text: #1a1a2e; --muted: #4c5470; --border: #ddd8cc;
+  --accent: #0f3460; --accent-text: #ffffff; --panel: #faf8f3; --error: #b3261e; }
+.tab.active { border-bottom-color: #efc07b; border-bottom-width: 3px; }
+.segmented button[aria-pressed="true"] { background: #efc07b; color: #1a1a2e; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #1a1a2e; --card: #16213e; --text: #ffffff; --muted: #b9c0d4; --border: #0f3460;
+    --accent: #efc07b; --accent-text: #1a1a2e; --panel: #1a1a2e; --error: #ff8a80; }
+  input, select { background: #1a1a2e; }
+}
+
+.preview { background: #1a1a2e; }
+.bulb .glow { background: #0f3460; }
+

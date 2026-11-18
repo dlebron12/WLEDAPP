@@ -1,0 +1,18 @@
+/* Option B: Blue Hour */
+:root { --bg: #edf1f7; --card: #ffffff; --text: #16213e; --muted: #4f5b78; --border: #cfd8e6;
+  --accent: #0f3460; --accent-text: #ffffff; --panel: #f4f7fb; --error: #b3261e; }
+.topbar { background: #0f3460; border-bottom-color: #0f3460; }
+.topbar .tab { color: #c9d6ea; }
+.topbar .tab.active { color: #ffffff; border-bottom-color: #efc07b; border-bottom-width: 3px; }
+.topbar .account, .topbar .account .link { color: #e6edf7; }
+.tab.active { border-bottom-color: #efc07b; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #16213e; --card: #0f3460; --text: #ffffff; --muted: #c3cde0; --border: #23508a;
+    --accent: #efc07b; --accent-text: #1a1a2e; --panel: #16213e; --error: #ff8a80; }
+  .topbar { background: #1a1a2e; border-bottom-color: #1a1a2e; }
+  input, select { background: #16213e; }
+}
+
+.preview { background: #1a1a2e; }
+.bulb .glow { background: #0f3460; }
+
