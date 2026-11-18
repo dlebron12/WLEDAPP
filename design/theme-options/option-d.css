@@ -1,0 +1,15 @@
+/* LUXE · Option D: Espresso & Burgundy */
+:root { --bg: #EFE9E1; --card: #FAF7F3; --text: #322D29; --muted: #6B6159; --border: #D1C7BD;
+  --accent: #72383D; --accent-text: #EFE9E1; --panel: #F4EFE8; --error: #9b2c2c; --ok: #3f6b48; }
+.tab.active { border-bottom-color: #72383D; border-bottom-width: 3px; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #322D29; --card: #3B3531; --text: #EFE9E1; --muted: #AC9C8D; --border: #4F4741;
+    --accent: #72383D; --accent-text: #EFE9E1; --panel: #322D29; --error: #e8a3a6; --ok: #9cc7a4; }
+  button.link { color: #D1C7BD; }
+  .tab.active { border-bottom-color: #AC9C8D; }
+  input, select { background: #2a2622; }
+}
+
+.preview { background: #2a2622; }
+.bulb .glow { background: #4a423c; }
+

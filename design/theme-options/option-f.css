@@ -1,0 +1,22 @@
+/* LUXE · Option F: Burgundy Statement */
+:root { --bg: #EFE9E1; --card: #FAF7F3; --text: #322D29; --muted: #6B6159; --border: #D1C7BD;
+  --accent: #72383D; --accent-text: #EFE9E1; --panel: #F4EFE8; --error: #9b2c2c; --ok: #3f6b48; }
+.topbar { background: #72383D; border-bottom: 2px solid #AC9C8D; }
+.topbar .tab { color: #E3CFCF; }
+.topbar .tab.active { color: #EFE9E1; border-bottom-color: #EFE9E1; border-bottom-width: 3px; }
+.topbar .account, .topbar .account .link { color: #EFE9E1; }
+.card { border-top: 4px solid #72383D; }
+.tab.active { border-bottom-color: #72383D; border-bottom-width: 3px; }
+.segmented button[aria-pressed="true"] { background: #AC9C8D; color: #322D29; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #322D29; --card: #3B3531; --text: #EFE9E1; --muted: #D1C7BD; --border: #5A514A;
+    --accent: #AC9C8D; --accent-text: #322D29; --panel: #322D29; --error: #e8a3a6; --ok: #9cc7a4; }
+  .card { border: 1px solid #5A514A; border-top: 4px solid #72383D; }
+  .tab.active { border-bottom-color: #AC9C8D; }
+  button.link { color: #D1C7BD; }
+  input, select { background: #2a2622; }
+}
+
+.preview { background: #2a2622; }
+.bulb .glow { background: #4a423c; }
+

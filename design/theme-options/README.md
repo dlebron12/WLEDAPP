@@ -1,9 +1,18 @@
 # Theme options (not decided yet)
 
-Three ways to restyle the app with the Light Ops palette. **None of these is applied to the app.**
+Six ways to restyle the app, in two palette families. **None of these is applied to the app.**
 They are kept here until a permanent choice is made.
 
-## Palette
+Every option has a **light** and a **dark** version; the app follows the phone/computer's light or
+dark setting. In all of them the light preview stays a night scene, and low-contrast colors (gold,
+taupe) are never used for small text on light backgrounds.
+
+Each screenshot shows, at phone size: sign-in page (light), Controls tab (light), sign-in page
+(dark), Controls tab (dark).
+
+---
+
+## NAVYLUXE (Options A, B, C)
 
 | Color | Hex |
 |---|---|
@@ -13,34 +22,49 @@ They are kept here until a permanent choice is made.
 | Gold | `#efc07b` |
 | White | `#FFFFFF` |
 
-Each option has a **light** and a **dark** version; the app follows the phone/computer's
-light or dark setting. Light versions use pale tints of the palette for backgrounds.
-In all three, the light preview stays a night scene (`#1a1a2e` background, unlit lights in
-`#0f3460`), and gold is never used for small text on white (too hard to read).
-
-## The options
-
-| | Option A: Midnight & Gold | Option B: Blue Hour | Option C: Gold Statement |
+| | A: Midnight & Gold | B: Blue Hour | C: Gold Statement |
 |---|---|---|---|
 | Idea | Navy layers, gold for actions | Blue `#0f3460` leads, gold as highlight | Gold-forward, navy header bar in both modes |
 | Dark | `#1a1a2e` background, `#16213e` cards, gold buttons | `#16213e` background, `#0f3460` cards, `#1a1a2e` header, gold buttons | `#1a1a2e` background, `#16213e` cards with thin gold borders, gold buttons |
 | Light | Warm off-white background, navy buttons, gold tab underline | Pale blue background, `#0f3460` header and buttons | Cream background, navy header, gold buttons with navy text, gold strip on cards |
-| Stylesheet | [option-a.css](option-a.css) | [option-b.css](option-b.css) | [option-c.css](option-c.css) |
-| Screenshots | [option-a.png](option-a.png) | [option-b.png](option-b.png) | [option-c.png](option-c.png) |
+| Files | [option-a.css](option-a.css) · [option-a.png](option-a.png) | [option-b.css](option-b.css) · [option-b.png](option-b.png) | [option-c.css](option-c.css) · [option-c.png](option-c.png) |
 
-Each screenshot shows, at phone size: sign-in page (light), Controls tab (light), sign-in page
-(dark), Controls tab (dark).
+![NAVYLUXE Option A](option-a.png)
+![NAVYLUXE Option B](option-b.png)
+![NAVYLUXE Option C](option-c.png)
 
-![Option A](option-a.png)
-![Option B](option-b.png)
-![Option C](option-c.png)
+---
+
+## LUXE (Options D, E, F)
+
+| Color | Hex |
+|---|---|
+| Espresso | `#322D29` |
+| Burgundy | `#72383D` |
+| Taupe | `#AC9C8D` |
+| Light taupe | `#D1C7BD` |
+| Grey | `#D9D9D9` |
+| Cream | `#EFE9E1` |
+
+| | D: Espresso & Burgundy | E: Soft Taupe | F: Burgundy Statement |
+|---|---|---|---|
+| Idea | Classic: burgundy for actions | Quiet, minimal neutrals | Burgundy header bar, bolder |
+| Light | Cream background, burgundy buttons and tab underline | Grey background, cream cards, espresso buttons, burgundy tab underline and links | Cream background, burgundy header, burgundy buttons, burgundy strip on cards |
+| Dark | Espresso background, burgundy buttons | Deep espresso, light-taupe buttons | Espresso with burgundy header, taupe buttons |
+| Files | [option-d.css](option-d.css) · [option-d.png](option-d.png) | [option-e.css](option-e.css) · [option-e.png](option-e.png) | [option-f.css](option-f.css) · [option-f.png](option-f.png) |
+
+![LUXE Option D](option-d.png)
+![LUXE Option E](option-e.png)
+![LUXE Option F](option-f.png)
+
+---
 
 ## Applying one later
 
 Each `option-*.css` only overrides the app's color variables and a few rules, so it is applied by
 loading it **after** `public/styles.css`. To try one locally without changing anything permanent:
 
-1. Copy it into the app: `cp design/theme-options/option-a.css public/theme.css`
+1. Copy it into the app, e.g. `cp design/theme-options/option-d.css public/theme.css`
 2. In `public/index.html` and `public/home.html`, add after the `styles.css` line:
    `<link rel="stylesheet" href="/theme.css">`
 

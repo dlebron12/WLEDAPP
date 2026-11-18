@@ -1,4 +1,4 @@
-/* Option C: Gold Statement */
+/* NAVYLUXE · Option C: Gold Statement */
 :root { --bg: #fbf7f0; --card: #ffffff; --text: #1a1a2e; --muted: #5d5a66; --border: #ead9bd;
   --accent: #efc07b; --accent-text: #1a1a2e; --panel: #fdf9f2; --error: #b3261e; }
 button.link { color: #0f3460; }                  /* gold text is too faint on white: links stay navy */

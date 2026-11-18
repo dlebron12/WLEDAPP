@@ -1,0 +1,19 @@
+/* LUXE · Option E: Soft Taupe */
+:root { --bg: #D9D9D9; --card: #EFE9E1; --text: #322D29; --muted: #5F5751; --border: #D1C7BD;
+  --accent: #322D29; --accent-text: #EFE9E1; --panel: #E8E1D8; --error: #9b2c2c; --ok: #3f6b48; }
+.topbar { background: #EFE9E1; }
+.tab.active { border-bottom-color: #72383D; border-bottom-width: 3px; }
+button.link { color: #72383D; }
+input, select { background: #F7F3EE; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #26221F; --card: #322D29; --text: #EFE9E1; --muted: #AC9C8D; --border: #4A433D;
+    --accent: #D1C7BD; --accent-text: #322D29; --panel: #2B2723; --error: #e8a3a6; --ok: #9cc7a4; }
+  .topbar { background: #322D29; }
+  .tab.active { border-bottom-color: #AC9C8D; }
+  button.link { color: #D1C7BD; }
+  input, select { background: #26221F; }
+}
+
+.preview { background: #2a2622; }
+.bulb .glow { background: #4a423c; }
+
