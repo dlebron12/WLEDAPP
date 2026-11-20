@@ -302,23 +302,42 @@ picker.addEventListener('change', closeLightPicker);
 picker.addEventListener('blur', closeLightPicker);
 
 // ---------- Grid / House view ----------
-// House view: the 25 lights spaced evenly along the roofline drawn in the SVG
-// (same coordinates: a 160 x 100 box), sitting just above the roof edge.
-const ROOFLINE = [[12, 60], [50, 31], [68, 45], [92, 22], [148, 60]];
+// House view: House A ("Option A · Classic Colonial"). The 25 lights run along its roof edges,
+// in the drawing's own 1000 x 640 coordinates: the main eaves and up and over the center gable,
+// then the garage eave. Lights are shared between the two edges by length, evenly spaced on each.
+const HOUSE_W = 1000;
+const HOUSE_H = 640;
+const ROOFLINES = [
+  [[162, 268], [258, 268], [278.5, 260.4], [403, 121.7], [527.8, 267.7], [647.6, 268]], // main house
+  [[644, 370], [884, 370]],                                                                // garage
+];
+const lineLength = (line) => line.slice(1).reduce((sum, p, i) => sum + Math.hypot(p[0] - line[i][0], p[1] - line[i][1]), 0);
+
 function pointsAlong(line, count) {
   const segs = line.slice(1).map((p, i) => ({ a: line[i], b: p, len: Math.hypot(p[0] - line[i][0], p[1] - line[i][1]) }));
   const total = segs.reduce((sum, sg) => sum + sg.len, 0);
   return Array.from({ length: count }, (_, k) => {
-    let d = (total * (k + 0.5)) / count;
-    const sg = segs.find((x) => (d <= x.len ? true : ((d -= x.len), false))) || segs[segs.length - 1];
-    const t = Math.min(1, d / sg.len);
-    return [sg.a[0] + (sg.b[0] - sg.a[0]) * t, sg.a[1] + (sg.b[1] - sg.a[1]) * t - 1.6];
+    let d = count === 1 ? total / 2 : (total * k) / (count - 1); // first and last light sit on the ends
+    let sg = null;
+    for (const x of segs) { if (d <= x.len) { sg = x; break; } d -= x.len; }
+    if (!sg) { sg = segs[segs.length - 1]; d = sg.len; } // rounding left us just past the end: use the end
+    const t = sg.len ? Math.min(1, d / sg.len) : 0;
+    return [sg.a[0] + (sg.b[0] - sg.a[0]) * t, sg.a[1] + (sg.b[1] - sg.a[1]) * t];
   });
 }
-pointsAlong(ROOFLINE, GRID).forEach(([x, y], i) => {
+
+function housePoints(count) {
+  const lens = ROOFLINES.map(lineLength);
+  const total = lens.reduce((a, b) => a + b, 0);
+  const counts = lens.map((l) => Math.round((count * l) / total));
+  counts[0] += count - counts.reduce((a, b) => a + b, 0); // make them add up to exactly `count`
+  return ROOFLINES.flatMap((line, i) => pointsAlong(line, counts[i]));
+}
+
+housePoints(GRID).forEach(([x, y], i) => {
   const el = els.preview.querySelectorAll('.bulb')[i];
-  el.style.setProperty('--hx', `${(x / 160) * 100}%`);
-  el.style.setProperty('--hy', `${y}%`);
+  el.style.setProperty('--hx', `${(x / HOUSE_W) * 100}%`);
+  el.style.setProperty('--hy', `${(y / HOUSE_H) * 100}%`);
 });
 
 function setView(view) {
