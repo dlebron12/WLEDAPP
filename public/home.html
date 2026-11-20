@@ -98,12 +98,16 @@
             <button type="button" data-view="house" aria-pressed="false">House</button>
           </div>
         </div>
-        <div id="individual-tools" class="paint-instruction" hidden>
-          <strong>Tap a light to choose its color</strong>
-          <button type="button" id="fill-all" class="link">Fill all lights with one color</button>
+        <p id="individual-tools" class="paint-instruction" hidden><strong>Tap a light to choose its color</strong></p>
+        <!-- Individual Light: color panel that opens at the light that was tapped -->
+        <div id="light-popover" class="light-popover" role="dialog" aria-labelledby="light-popover-title" hidden>
+          <div class="light-popover-head">
+            <strong id="light-popover-title">Light 1</strong>
+            <button type="button" id="light-popover-done" class="link">Done</button>
+          </div>
+          <div id="light-swatches" class="light-swatches"></div>
+          <label class="light-more">More colors <input type="color" id="light-picker" aria-label="Any color for this light"></label>
         </div>
-        <!-- Individual Light: the color picker opened for the light that was tapped -->
-        <input type="color" id="light-picker" class="light-picker" tabindex="-1" aria-label="Color for the selected light">
         <div id="preview" class="preview" aria-label="Live preview of the lights">
           <!-- House view backdrop: "Option A · Classic Colonial" from the Light Preview Houses design canvas.
                The lights are placed along its roofline by controls.js (same 1000 x 640 coordinates). -->

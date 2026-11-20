@@ -154,6 +154,7 @@ function updateVisibility() {
   $('speed-field').hidden = e === 'solid' || e === 'individual' || e === 'repeated';
   $('color-field').hidden = e === 'colorful' || e === 'repeated' || e === 'individual';
   $('individual-tools').hidden = e !== 'individual';
+  if (e !== 'individual' && pickerAnchor) closeLightPicker();
   $('rp-field').hidden = e !== 'repeated';
   $('rp-box').hidden = e !== 'repeated';
   updateRpNote();
@@ -216,8 +217,6 @@ $('rp-preview').addEventListener('click', () => {
   updateRpNote();
 });
 
-$('fill-all').addEventListener('click', (e) => openLightPicker('all', e.currentTarget));
-
 // ---------- Save / Apply ----------
 $('save').addEventListener('click', async () => {
   try {
@@ -267,39 +266,76 @@ for (let i = 0; i < GRID; i++) {
   bulbs.push(b.querySelector('.glow')); // paintBulb lights the glow; the number stays readable
 }
 
-// ---------- Individual Light: color picker per light ----------
-// One shared color input. Tapping a light places it over that light and opens it, so the
-// system color picker appears next to the light (a sheet on phones). target is the light's
-// index, or 'all' for "Fill all lights".
+// ---------- Individual Light: color panel per light ----------
+// Tapping a light opens a small panel next to it (a sheet along the bottom on phones) with
+// swatches and a "More colors" input. The panel is a real, visible element, so it opens on
+// every browser; the color input inside it is tapped by the user directly.
+const SWATCHES = ['#ffffff', '#fff1d0', '#ffd27a', '#efc07b', '#ff9a3c', '#ff5a1f',
+  '#ff0000', '#ff3d7f', '#c0399b', '#8a2be2', '#3f51ff', '#0f3460',
+  '#00a2ff', '#00e5ff', '#00c896', '#00ff40', '#9be000', '#000000'];
+const popover = $('light-popover');
 const picker = $('light-picker');
 let pickerTarget = null;
 let pickerAnchor = null;
 
-function openLightPicker(target, anchor) {
-  pickerTarget = target;
-  if (pickerAnchor) pickerAnchor.classList.remove('picking');
-  pickerAnchor = anchor;
-  anchor.classList.add('picking');
-  picker.value = target === 'all' ? settings.pixels[0] : settings.pixels[target];
-  const r = anchor.getBoundingClientRect();
-  Object.assign(picker.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
-  try { picker.showPicker(); } catch { picker.click(); } // older browsers: click opens it
+$('light-swatches').innerHTML = SWATCHES.map((c) =>
+  `<button type="button" data-color="${c}" style="--sw:${c}" aria-label="${c === '#000000' ? 'Off' : c}" aria-pressed="false"></button>`).join('');
+
+function setLightColor(color) {
+  if (pickerTarget === null || !settings) return;
+  settings.pixels[pickerTarget] = color;
+  picker.value = color;
+  markSwatch(color);
+  updateStatus();
+}
+function markSwatch(color) {
+  for (const btn of $('light-swatches').children) btn.setAttribute('aria-pressed', String(btn.dataset.color === color.toLowerCase()));
 }
 
-picker.addEventListener('input', () => {
-  if (pickerTarget === null || !settings) return;
-  if (pickerTarget === 'all') settings.pixels = Array(GRID).fill(picker.value);
-  else settings.pixels[pickerTarget] = picker.value;
-  updateStatus();
-});
-// Done (a color was chosen) or dismissed: stop outlining the light.
+function openLightPicker(target, anchor) {
+  if (pickerAnchor) pickerAnchor.classList.remove('picking');
+  pickerTarget = target;
+  pickerAnchor = anchor;
+  anchor.classList.add('picking');
+  const color = settings.pixels[target];
+  picker.value = color;
+  markSwatch(color);
+  $('light-popover-title').textContent = `Light ${target + 1}`;
+  popover.hidden = false;
+  // Below the light (above it if there's no room), kept inside the window.
+  const r = anchor.getBoundingClientRect();
+  const w = popover.offsetWidth, h = popover.offsetHeight;
+  const left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 8));
+  const top = r.bottom + 8 + h < innerHeight ? r.bottom + 8 : Math.max(8, r.top - h - 8);
+  Object.assign(popover.style, { left: `${left}px`, top: `${top}px` });
+  // Phones show the panel as a sheet along the bottom: scroll so the light stays visible above it.
+  if (!matchMedia('(max-width: 480px)').matches) return;
+  document.body.classList.add('sheet-open');
+  document.body.style.setProperty('--sheet-h', `${popover.offsetHeight + 16}px`);
+  const sheetTop = popover.getBoundingClientRect().top;
+  if (r.bottom + 16 > sheetTop) scrollBy({ top: r.bottom + 16 - sheetTop, behavior: 'smooth' });
+}
+
 function closeLightPicker() {
   if (pickerAnchor) pickerAnchor.classList.remove('picking');
   pickerAnchor = null;
   pickerTarget = null;
+  popover.hidden = true;
+  document.body.classList.remove('sheet-open');
 }
-picker.addEventListener('change', closeLightPicker);
-picker.addEventListener('blur', closeLightPicker);
+
+$('light-swatches').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-color]');
+  if (btn) setLightColor(btn.dataset.color);
+});
+picker.addEventListener('input', () => setLightColor(picker.value));
+$('light-popover-done').addEventListener('click', closeLightPicker);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !popover.hidden) closeLightPicker(); });
+// Tapping anywhere else (except another light, which moves the panel) closes it.
+document.addEventListener('pointerdown', (e) => {
+  if (popover.hidden || popover.contains(e.target) || e.target.closest('.preview.paintable .bulb')) return;
+  closeLightPicker();
+});
 
 // ---------- Grid / House view ----------
 // House view: House A ("Option A · Classic Colonial"). The 25 lights run along its roof edges,

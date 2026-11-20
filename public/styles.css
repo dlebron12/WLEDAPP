@@ -250,19 +250,11 @@ button.link {
 
 /* Individual Light: instruction above the preview */
 .paint-instruction {
-  display: grid;
-  justify-items: center;
-  gap: 4px;
-  margin: 2px 0 4px;
-  padding: 12px 14px;
+  margin: 2px 0 6px;
   text-align: center;
-  border: 1px dashed var(--accent);
-  border-radius: 10px;
-  background: var(--panel);
 }
 .paint-instruction[hidden] { display: none; }
 .paint-instruction strong { font-size: 1rem; color: var(--text); }
-.paint-instruction .link { font-size: 0.88rem; }
 .preview.paintable .bulb { cursor: pointer; }
 .preview.paintable .bulb:hover { outline: 2px solid #fff6; outline-offset: 3px; }
 
@@ -382,7 +374,28 @@ input[type="file"] { max-width: 100%; font-size: 0.85rem; }
 .preview.house.paintable .bulb:hover { outline-offset: 2px; }
 
 /* Individual Light: the per-light color picker (invisible; positioned over the tapped light) */
-.light-picker { position: fixed; opacity: 0; pointer-events: none; border: 0; padding: 0; z-index: -1; }
+/* Individual Light: color panel at the tapped light */
+.light-popover {
+  position: fixed; z-index: 50; width: 232px; padding: 10px 12px 12px;
+  background: var(--panel); color: var(--text); border: 1px solid var(--border, #0003);
+  border-radius: 12px; box-shadow: 0 10px 30px #0006;
+}
+.light-popover[hidden] { display: none; }
+.light-popover-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.light-swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.light-swatches button {
+  aspect-ratio: 1; width: 100%; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 2px solid #0002; background: var(--sw);
+}
+.light-swatches button[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 2px; }
+.light-more { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 0.9rem; }
+.light-more input { width: 56px; height: 32px; padding: 0; border: 0; background: none; cursor: pointer; }
+@media (max-width: 480px) {
+  /* phones: a sheet along the bottom of the screen */
+  .light-popover { left: 8px !important; right: 8px; top: auto !important; bottom: 8px; width: auto; }
+  .light-swatches { grid-template-columns: repeat(9, 1fr); gap: 5px; }
+  body.sheet-open { padding-bottom: var(--sheet-h, 0px); }
+}
 .preview.paintable .bulb.picking { outline: 3px solid #fff; outline-offset: 3px; border-radius: 50%; }
 
 /* ---------- Theme: NAVYLUXE Option C component rules ---------- */
