@@ -358,7 +358,7 @@ input[type="file"] { max-width: 100%; font-size: 0.85rem; }
 .preview.house {
   display: block;
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 1000 / 640; /* House A drawing */
   padding: 0;
   overflow: hidden;
 }
@@ -367,7 +367,7 @@ input[type="file"] { max-width: 100%; font-size: 0.85rem; }
   position: absolute;
   left: var(--hx);
   top: var(--hy);
-  width: 3.4%;
+  width: 2.2%;
   max-width: none;
   transform: translate(-50%, -50%);
 }
