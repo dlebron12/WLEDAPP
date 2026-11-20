@@ -1,23 +1,30 @@
+/* Theme: NAVYLUXE Option C, "Gold Statement" (design/theme-options/option-c.css).
+   Palette: #1a1a2e darkest navy, #16213e dark navy, #0f3460 blue, #efc07b gold, #ffffff white. */
 :root {
-  --bg: #f4f5f8;
+  --bg: #fbf7f0;          /* cream */
   --card: #ffffff;
-  --text: #1b1d23;
-  --muted: #6b7080;
-  --border: #d9dce3;
-  --accent: #5b5bf0;
-  --accent-text: #ffffff;
-  --error: #c62f3c;
+  --text: #1a1a2e;
+  --muted: #5d5a66;
+  --border: #ead9bd;
+  --accent: #efc07b;      /* gold: buttons, active tabs */
+  --accent-text: #1a1a2e;
+  --error: #b3261e;
+  --navy: #1a1a2e;
+  --navy-2: #16213e;
+  --blue: #0f3460;
+  --gold: #efc07b;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1115;
-    --card: #1a1d24;
-    --text: #e8eaf0;
-    --muted: #9aa0b0;
-    --border: #2d313b;
-    --accent: #7c7cff;
-    --error: #ff6b78;
+    --bg: #1a1a2e;
+    --card: #16213e;
+    --text: #ffffff;
+    --muted: #cfc8b8;
+    --border: rgba(239, 192, 123, 0.35);
+    --accent: #efc07b;
+    --accent-text: #1a1a2e;
+    --error: #ff8a80;
   }
 }
 
@@ -116,9 +123,9 @@ button:disabled { opacity: 0.6; cursor: default; }
 .message { min-height: 1.5em; margin: 0; color: var(--error); font-size: 0.9rem; }
 
 /* ---------- App shell (signed-in pages) ---------- */
-:root { --panel: #fafbfc; --ok: #1f8a4c; }
+:root { --panel: #fdf9f2; --ok: #1f7a46; }
 @media (prefers-color-scheme: dark) {
-  :root { --panel: #14161c; --ok: #4ed38a; }
+  :root { --panel: #1a1a2e; --ok: #8fd3a5; }
 }
 
 body.app { display: block; place-items: normal; padding: 0; }
@@ -206,7 +213,7 @@ button.link {
   grid-template-columns: repeat(5, 1fr);
   gap: clamp(10px, 4vw, 22px);
   padding: clamp(16px, 5vw, 28px);
-  background: #0b0c10;
+  background: var(--navy);   /* night sky behind the lights */
   border-radius: 12px;
 }
 .bulb {
@@ -228,7 +235,7 @@ button.link {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: #262a33;
+  background: var(--blue);   /* unlit bulb */
   transition: box-shadow 0.08s linear;
 }
 .bulb .num {
@@ -377,3 +384,21 @@ input[type="file"] { max-width: 100%; font-size: 0.85rem; }
 /* Individual Light: the per-light color picker (invisible; positioned over the tapped light) */
 .light-picker { position: fixed; opacity: 0; pointer-events: none; border: 0; padding: 0; z-index: -1; }
 .preview.paintable .bulb.picking { outline: 3px solid #fff; outline-offset: 3px; border-radius: 50%; }
+
+/* ---------- Theme: NAVYLUXE Option C component rules ---------- */
+/* Navy header bar with a gold line, in both light and dark mode. */
+.topbar { background: var(--navy); border-bottom: 2px solid var(--gold); }
+.topbar .tab { color: #b9c0d4; }
+.topbar .tab.active { color: var(--gold); border-bottom-color: var(--gold); border-bottom-width: 3px; }
+.topbar .account, .topbar .account .link { color: #e9e4d8; }
+/* Gold strip across the top of every card; gold underline on active tabs. */
+.card { border-top: 4px solid var(--gold); }
+.tab.active { border-bottom-color: var(--gold); border-bottom-width: 3px; }
+/* Gold text is too faint on white, so links stay navy blue in light mode. */
+button.link { color: var(--blue); }
+@media (prefers-color-scheme: dark) {
+  button.link { color: var(--gold); }
+  .card { border: 1px solid rgba(239, 192, 123, 0.45); border-top: 4px solid var(--gold); }
+  .topbar { background: var(--navy-2); }
+  input, select { background: var(--navy); }
+}
